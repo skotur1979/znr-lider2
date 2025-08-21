@@ -1,0 +1,11 @@
+<?php
+$type='TrueType';
+$name='';
+$desc=NULL;
+$up=;
+$ut=;
+$cw=NULL;
+$enc='cp1250';
+$file='DejaVuSans.z';
+$originalsize=741536;
+?>
