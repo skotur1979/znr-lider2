@@ -25,9 +25,10 @@ class TestResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-collection';
     protected static ?string $navigationGroup = 'Upravljanje';
+    protected static ?string $navigationLabel = 'Testovi';
+    protected static ?string $pluralModelLabel = 'Testovi';
+    protected static ?string $modelLabel = 'Test';
     protected static ?int $navigationSort = 30; // da bude ispod Budžeta
-
-    
 
     public static function form(Form $form): Form
 {
