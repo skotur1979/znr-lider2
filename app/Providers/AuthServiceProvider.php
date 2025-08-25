@@ -2,8 +2,16 @@
 
 namespace App\Providers;
 
-// use Illuminate\Support\Facades\Gate;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+
+// MODELI koje štitimo "po vlasniku"
+use App\Models\Employee;
+use App\Models\Machine;
+use App\Models\Fire;
+use App\Models\Miscellaneous;
+
+// JEDAN generički policy za sve vlasničke modele
+use App\Policies\OwnedPolicy;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -13,18 +21,27 @@ class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     protected $policies = [
-        // 'App\Models\Model' => 'App\Policies\ModelPolicy',
+        Employee::class      => OwnedPolicy::class,
+        Machine::class       => OwnedPolicy::class,
+        Fire::class          => OwnedPolicy::class,
+        Miscellaneous::class => OwnedPolicy::class,
+
+        // Ako kasnije želiš dodati još “po korisniku” modele:
+        // \App\Models\Chemical::class         => OwnedPolicy::class,
+        // \App\Models\Observation::class      => OwnedPolicy::class,
+        // \App\Models\Incident::class         => OwnedPolicy::class,
+        // \App\Models\FirstAidKit::class      => OwnedPolicy::class,
+        // \App\Models\PersonalProtectiveEquipmentLog::class => OwnedPolicy::class,
+        // ...
     ];
 
     /**
      * Register any authentication / authorization services.
-     *
-     * @return void
      */
-    public function boot()
+    public function boot(): void
     {
         $this->registerPolicies();
-
-        //
+        // Nema dodatnih Gate pravila – sav access je kroz policy.
     }
 }
+

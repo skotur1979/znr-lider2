@@ -15,7 +15,7 @@ class Fire extends Model
     'user_id',
     'place',
     'type',
-    'factory_number/year_of_production',
+    'factory_number_year_of_production', // ⬅️ alias ključ
     'serial_label_number',
     'examination_valid_from',
     'examination_valid_until',
@@ -34,6 +34,21 @@ class Fire extends Model
         'regular_examination_valid_from' => 'date',
         'pdf' => 'array',
     ];
+
+     // Prikaži alias i pri serializaciji
+    protected $appends = ['factory_number_year_of_production'];
+
+    // Accessor: čita originalnu kolonu s kosom crtom
+    public function getFactoryNumberYearOfProductionAttribute()
+    {
+        return $this->attributes['factory_number/year_of_production'] ?? null;
+    }
+
+    // Mutator: zapisuje u originalnu kolonu s kosom crtom
+    public function setFactoryNumberYearOfProductionAttribute($value): void
+    {
+        $this->attributes['factory_number/year_of_production'] = $value;
+    }
 
     public static function rules()
     {

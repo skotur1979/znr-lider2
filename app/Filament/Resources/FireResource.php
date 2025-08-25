@@ -11,6 +11,7 @@ use Filament\Resources\Form;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 use Filament\Tables;
+use Illuminate\Support\Facades\Auth; // ⬅️ dodaj na vrh
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Components\Section;
@@ -42,7 +43,9 @@ class FireResource extends Resource
 
     public static function form(Form $form): Form
 {
-    return static::assignUserField($form);
+    // AutoAssignsUser dodaje user_id; ostatak sheme ispod:
+        return static::assignUserField($form)
+            ->schema(static::additionalFormFields());
 }
             public static function additionalFormFields(): array
 {
@@ -50,7 +53,11 @@ class FireResource extends Resource
                 Section::make('Podatci o vatrogasnom aparatu')->schema([
                     TextInput::make('place')->label('Mjesto gdje se aparat nalazi (obavezno)')->prefixIcon('heroicon-o-home')->string()->filled(),
                     TextInput::make('type')->label('Tip aparata')->prefixIcon('heroicon-o-book-open')->nullable(),
-                    TextInput::make('factory_number/year_of_production')->label('Tvornički broj/Godina proizvodnje')->prefixIcon('heroicon-o-document')->nullable(),
+                    // ⬇️ koristimo ALIAS ključ (model mappa na kolonu s kosom crtom)
+                TextInput::make('factory_number_year_of_production')
+                    ->label('Tvornički broj/Godina proizvodnje')
+                    ->prefixIcon('heroicon-o-document')
+                    ->nullable(),
                     TextInput::make('serial_label_number')->label('Serijski broj evidencijske naljepnice')->prefixIcon('heroicon-o-document-duplicate')->nullable(),
                 ])->columns(2),
 
@@ -195,21 +202,35 @@ class FireResource extends Resource
 
     public static function getEloquentQuery(): Builder
 {
-    return parent::getEloquentQuery()
-        ->where('user_id', auth()->id())
-        ->withoutGlobalScopes([
-            SoftDeletingScope::class,
-        ]);
-}
+    $query = parent::getEloquentQuery()
+        ->withoutGlobalScopes([SoftDeletingScope::class]);
 
+    // Admin vidi sve
+    if (Auth::user()?->isAdmin()) {
+        return $query;
+    }
+
+    // Ostali vide samo svoje
+    return $query->where('user_id', Auth::id());
+}
 
     public function isTableSearchable(): bool
     {
         return true;
     }
-    public static function getNavigationBadge(): ?string
-    {
-        return static::getModel()::count();
-    }
+    // (opcionalno) globalni search ograniči isto
+public static function getGlobalSearchEloquentQuery(): Builder
+{
+    return static::getEloquentQuery();
+}
 
+// (opcionalno) badge neka broji filtrirano
+public static function getNavigationBadge(): ?string
+{
+    $q = static::getModel()::query();
+    if (! Auth::user()?->isAdmin()) {
+        $q->where('user_id', Auth::id());
+    }
+    return (string) $q->count();
+}
 }
