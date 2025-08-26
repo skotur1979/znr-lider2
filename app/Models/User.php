@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -13,75 +12,29 @@ class User extends Authenticatable implements FilamentUser
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'is_admin',
-        'role', // obavezno uključeno
-    ];
-  
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $fillable = ['name','email','password','is_admin'];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
+    protected $hidden = ['password','remember_token'];
+
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'is_admin' => 'boolean',
     ];
+
+    public function isAdmin(): bool
+    {
+        return $this->is_admin === true;
+    }
 
     public function canAccessFilament(): bool
-{
-    return in_array($this->role, ['admin', 'korisnik']);
-}
+    {
+        // Svi aktivni korisnici imaju pristup panelu; prava dalje rješavaju policy + query filter
+        return true;
+    }
 
-
-    public function rules()
-{
-    return [
-        'email' => [
-            'required',
-            'email',
-            Rule::unique('users')->ignore($this->route('user')),
-        ],
-    ];
-}
-public function employees()
-{
-    return $this->hasMany(Employee::class);
-}
-public function machines()
-{
-    return $this->hasMany(Machine::class);
-}
-public function fires()
-{
-    return $this->hasMany(Fire::class);
-}
-public function miscellaneouses()
-{
-    return $this->hasMany(\App\Models\Miscellaneous::class);
-
-
-}
-public function isAdmin(): bool
-{
-    return $this->role === 'admin';
-}
-
+    // Relacije koje već koristiš
+    public function employees()  { return $this->hasMany(Employee::class); }
+    public function machines()   { return $this->hasMany(Machine::class); }
+    public function fires()      { return $this->hasMany(Fire::class); }
+    public function miscellaneouses() { return $this->hasMany(\App\Models\Miscellaneous::class); }
 }

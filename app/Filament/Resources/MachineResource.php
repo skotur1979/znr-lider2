@@ -25,6 +25,7 @@ use App\Traits\AutoAssignsUser;
 use App\Imports\MachinesImport;
 use Filament\Notifications\Notification;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Auth;
 
 
 class MachineResource extends Resource
@@ -205,11 +206,16 @@ class MachineResource extends Resource
 
     public static function getEloquentQuery(): Builder
 {
-    return parent::getEloquentQuery()
-        ->where('user_id', auth()->id())
-        ->withoutGlobalScopes([
-            SoftDeletingScope::class,
-        ]);
+    $query = parent::getEloquentQuery()
+        ->withoutGlobalScopes([SoftDeletingScope::class]);
+
+    // Admin vidi sve
+    if (Auth::user()?->isAdmin()) {
+        return $query;
+    }
+
+    // Ostali vide samo svoje
+    return $query->where('user_id', Auth::id());
 }
 
 
@@ -219,8 +225,15 @@ class MachineResource extends Resource
     }
 
     public static function getNavigationBadge(): ?string
-    {
-        return static::getModel()::count();
+{
+    $q = static::getModel()::query();
+    if (! Auth::user()?->isAdmin()) {
+        $q->where('user_id', Auth::id());
     }
-
+    return (string) $q->count();
+}
+public static function getGlobalSearchEloquentQuery(): Builder
+{
+    return static::getEloquentQuery();
+}
 }

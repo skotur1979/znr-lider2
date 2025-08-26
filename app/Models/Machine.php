@@ -13,7 +13,6 @@ class Machine extends Model
     protected $fillable = [
         'user_id',
         'name',
-        'name',
         'manufacturer', // Proizvođač
         'factory_number', // Tvornički broj
         'inventory_number', // Inventarni broj

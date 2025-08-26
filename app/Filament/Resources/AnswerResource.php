@@ -26,6 +26,9 @@ class AnswerResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-collection';
     protected static ?string $navigationGroup = 'Upravljanje';
+    protected static ?string $navigationLabel = 'Odgovori';
+    protected static ?string $pluralModelLabel = 'Odgovori';
+    protected static ?string $modelLabel = 'Odgovor';
     protected static ?int $navigationSort = 32;
 
     public static function form(Form $form): Form

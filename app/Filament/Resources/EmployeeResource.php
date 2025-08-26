@@ -27,6 +27,7 @@ use Filament\Forms\Components\Panel;
 use Filament\Facades\Filament;
 use Filament\Tables\Columns\ViewColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Illuminate\Support\Facades\Auth;
 
 class EmployeeResource extends Resource
 {
@@ -314,20 +315,30 @@ BadgeColumn::make('pdf')
     }
     public static function getEloquentQuery(): Builder
 {
-    return parent::getEloquentQuery()
-        ->where('user_id', auth()->id())
+    $query = parent::getEloquentQuery()
         ->with('certificates')
         ->withoutGlobalScopes([SoftDeletingScope::class]);
+
+    return Auth::user()?->isAdmin()
+        ? $query
+        : $query->where('user_id', Auth::id());
 }
 
     public function isTableSearchable(): bool
     {
         return true;
     }
-    public static function getNavigationBadge(): ?string
-    {
-        return static::getModel()::count();
-    }
-    
+    public static function getGlobalSearchEloquentQuery(): Builder
+{
+    return static::getEloquentQuery();
+}
 
+public static function getNavigationBadge(): ?string
+{
+    $q = static::getModel()::query();
+    if (! auth()->user()?->isAdmin()) {
+        $q->where('user_id', auth()->id());
+    }
+    return (string) $q->count();
+}
 }

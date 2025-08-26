@@ -25,6 +25,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use Filament\Forms\Components\FileUpload;
 use App\Traits\AutoAssignsUser;
+use Illuminate\Support\Facades\Auth; // ⬅️ dodaj import na vrhu
 
 class MiscellaneousResource extends Resource
 {
@@ -52,13 +53,48 @@ class MiscellaneousResource extends Resource
     return [
                 Section::make('Podatci o predmetu')->schema([
                     TextInput::make('name')->label('Naziv (obavezno)')->prefixIcon('heroicon-o-cog')->string()->filled(),
-                    Select::make('category_id')
-                            ->label('Kategorija')
-                            ->options(Category::all()->pluck('name','id')->toArray())
-                            ->default(1)
-                            ->disablePlaceholderSelection()
-                            ->searchable()
-                            ->filled(),
+                    // U FORMI – zamijeni Select::make('category_id') blok ovim
+Select::make('category_id')
+    ->label('Kategorija')
+    ->required()
+    ->searchable()
+    ->preload()
+    // 🔒 prikaz opcija kod otvaranja/selectanja (filtrirano po vlasniku)
+    ->options(function () {
+        $q = Category::query();
+        if (! Auth::user()?->isAdmin()) {
+            $q->where('user_id', Auth::id());
+        }
+        return $q->orderBy('name')->pluck('name', 'id')->toArray();
+    })
+    // 🔎 rezultati pretrage (da i search bude ograničen)
+    ->getSearchResultsUsing(function (string $search) {
+        $q = Category::query()
+            ->where('name', 'like', "%{$search}%")
+            ->orderBy('name')
+            ->limit(50);
+
+        if (! Auth::user()?->isAdmin()) {
+            $q->where('user_id', Auth::id());
+        }
+
+        return $q->pluck('name', 'id')->toArray();
+    })
+    // 🏷️ labela za već spremljenu vrijednost
+    ->getOptionLabelUsing(function ($value) {
+        return Category::find($value)?->name;
+    })
+    // ➕ korisnik može odmah napraviti novu svoju kategoriju
+    ->createOptionForm([
+        Forms\Components\TextInput::make('name')->label('Naziv kategorije')->required(),
+    ])
+    ->createOptionUsing(function (array $data) {
+        return Category::create([
+            'name'    => $data['name'],
+            'user_id' => Auth::id(),
+        ])->id;
+    }),
+
                     TextInput::make('examiner')->label('Ispitao')->prefixIcon('heroicon-o-cog')->nullable(),
                     TextInput::make('report_number')->label('Broj izvještaja')->prefixIcon('heroicon-o-document-duplicate')->nullable(),
 
@@ -126,7 +162,13 @@ class MiscellaneousResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('name')->searchable()->sortable()->weight('bold')->wrap()->label('Naziv'),
-                BadgeColumn::make('category_id')->enum(Category::all()->pluck('name','id')->toArray())->label('Kategorija')->alignCenter()->sortable(),
+                TextColumn::make('category.name')
+    ->label('Kategorija')
+    ->sortable()
+    ->searchable()
+    ->alignCenter(),
+
+
                 TextColumn::make('examiner')->sortable()->size('sm')->label('Ispitao')->alignCenter(),
 
                 TextColumn::make('examination_valid_from')->date('d.m.Y')->sortable()->alignCenter()->label('Datum ispitivanja'),
@@ -164,7 +206,18 @@ class MiscellaneousResource extends Resource
             ])
             ->filters([
                 Tables\Filters\TrashedFilter::make(),
-                SelectFilter::make('category_id')->options(Category::all()->pluck('name', 'id')->toArray())->label('Kategorije'),
+    SelectFilter::make('category_id')
+        ->label('Kategorije')
+        ->options(function () {
+            $q = Category::query();
+
+            if (! auth()->user()?->isAdmin()) {
+                $q->where('user_id', auth()->id());
+            }
+
+            return $q->orderBy('name')->pluck('name', 'id')->toArray();
+        })
+        ->searchable(), // opcionalno
                 Filter::make('examination_validity_expired')->label('Ispitivanje (isteklo)')->query(fn (Builder $query): Builder => $query->where('examination_valid_until', '<', Carbon::today())),
                 Filter::make('examination_validity_expiring')->label('Ispitivanje (uskoro ističe)')->query(fn (Builder $query): Builder => $query->where('examination_valid_until', '>', Carbon::today())->where('examination_valid_until','<', Carbon::today()->addMonth())),
             ])
@@ -201,11 +254,12 @@ class MiscellaneousResource extends Resource
 
     public static function getEloquentQuery(): Builder
 {
-    return parent::getEloquentQuery()
-        ->where('user_id', auth()->id())
-        ->withoutGlobalScopes([
-            SoftDeletingScope::class,
-        ]);
+    $query = parent::getEloquentQuery()
+        ->withoutGlobalScopes([SoftDeletingScope::class]);
+
+    return Auth::user()?->isAdmin()
+        ? $query
+        : $query->where('user_id', Auth::id());
 }
 
 
@@ -213,9 +267,18 @@ class MiscellaneousResource extends Resource
     {
         return true;
     }
-    public static function getNavigationBadge(): ?string
-    {
-        return static::getModel()::count();
+    public static function getGlobalSearchEloquentQuery(): Builder
+{
+    return static::getEloquentQuery();
+}
+
+public static function getNavigationBadge(): ?string
+{
+    $q = static::getModel()::query();
+    if (! Auth::user()?->isAdmin()) {
+        $q->where('user_id', Auth::id());
     }
+    return (string) $q->count();
+}
 
 }
