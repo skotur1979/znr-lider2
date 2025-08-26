@@ -5,12 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
 
 class Incident extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'user_id',                // ⬅️ VAŽNO
         'location',
         'type_of_incident',
         'permanent_or_temporary',
@@ -31,5 +33,16 @@ class Incident extends Model
     'investigation_report' => 'array',
     'pdf' => 'array',
 ];
+public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+    protected static function booted(): void
+{
+    static::creating(function ($model) {
+        if (blank($model->user_id) && Auth::check()) {
+            $model->user_id = Auth::id();
+        }
+    });
 }
-
+}

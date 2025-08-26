@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\IncidentResource\Pages;
-use App\Filament\Resources\IncidentResource\RelationManagers;
 use App\Models\Incident;
 use Filament\Forms;
 use Filament\Resources\Form;
@@ -13,20 +12,15 @@ use Filament\Tables;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Components\{TextInput, Select, DatePicker, FileUpload, Textarea};
-use Filament\Tables\Columns\{TextColumn, ImageColumn};
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Filament\Tables\Filters\Filter;
-use Filament\Tables\Actions\Action;
-use Filament\Tables\Actions\{EditAction, DeleteAction};
-use App\Models\Observation;
-use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Columns\{TextColumn, ImageColumn, BadgeColumn};
+use Filament\Tables\Filters\{SelectFilter, Filter};
+use Illuminate\Support\Facades\Auth;
+use App\Traits\AutoAssignsUser;
 
 
 class IncidentResource extends Resource
 {
+    use AutoAssignsUser; // ⬅️ ako već koristiš ovaj trait
     protected static ?string $model = Incident::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-eye';
@@ -262,12 +256,35 @@ TextInput::make('working_days_lost')
         ];
     }
 
-    public static function getEloquentQuery(): Builder
+    // (A) upit: admin sve, korisnik samo svoje
+public static function getEloquentQuery(): Builder
 {
-    return parent::getEloquentQuery()->withoutGlobalScopes(); // bez withTrashed
+    $q = parent::getEloquentQuery()
+        ->withoutGlobalScopes([SoftDeletingScope::class]);
+
+    return Auth::user()?->isAdmin()
+        ? $q
+        : $q->where('user_id', Auth::id());
 }
-    public static function getNavigationBadge(): ?string
-    {
-        return static::getModel()::count();
+
+// (B) kod kreiranja upiši user_id (ako nemaš AutoAssignsUser tu)
+public static function mutateFormDataBeforeCreate(array $data): array
+{
+    $data['user_id'] = Auth::id();
+    return $data;
+}
+
+// (C) (opcionalno) global search i badge da prate isto
+public static function getGlobalSearchEloquentQuery(): Builder
+{
+    return static::getEloquentQuery();
+}
+public static function getNavigationBadge(): ?string
+{
+    $q = static::getModel()::query();
+    if (! Auth::user()?->isAdmin()) {
+        $q->where('user_id', Auth::id());
     }
+    return (string) $q->count();
+}
 }
