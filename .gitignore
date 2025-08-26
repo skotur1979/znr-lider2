@@ -1,21 +1,43 @@
+# --- Dependencies / build ---
 /node_modules
 /public/build
 /public/hot
-/public/storage
-/storage/*.key
+/public/mix-manifest.json
 /vendor
+
+# --- Storage (ključevi, logovi, cache, sesije, views, debugbar) ---
+/storage/*.key
+/storage/logs
+/storage/framework/cache
+/storage/framework/sessions
+/storage/framework/views
+/storage/framework/testing
+/storage/debugbar
+
+# --- Env / konfiguracije koje ne idu u repo ---
 .env
 .env.backup
 .env.production
 .phpunit.result.cache
-Homestead.json
 Homestead.yaml
+Homestead.json
 auth.json
-npm-debug.log
-yarn-error.log
+composer.phar
+
+# --- Editor / IDE / OS ---
 /.fleet
 /.idea
 /.vscode
-error_log
+.DS_Store
+Thumbs.db
+
+# --- NPM / Yarn / ostalo ---
+npm-debug.log
+yarn-error.log
+
+# --- Web server / ostalo ---
 .htaccess
+error_log
+
+# --- Tvoj prilagođeni dodatak (spriječi slučajno dodavanje) ---
 znr-lider2/
