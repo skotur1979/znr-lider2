@@ -24,6 +24,7 @@ class AuthServiceProvider extends ServiceProvider
         Employee::class      => OwnedPolicy::class,
         Machine::class       => OwnedPolicy::class,
         Fire::class          => OwnedPolicy::class,
+        Category::class      => OwnedPolicy::class,
         Miscellaneous::class => OwnedPolicy::class,
 
         // Ako kasnije želiš dodati još “po korisniku” modele:
