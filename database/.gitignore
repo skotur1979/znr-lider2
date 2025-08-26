@@ -1,1 +1,42 @@
-*.sqlite*
+# Laravel standard .gitignore
+
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+Homestead.yaml
+Homestead.json
+npm-debug.log
+yarn-error.log
+.idea
+.vscode
+/.fleet
+/.phpstorm.meta.php
+.phpunit.cache
+
+# OS specific
+Thumbs.db
+.DS_Store
+
+# Composer PHAR
+composer.phar
+
+# Laravel mix
+/public/mix-manifest.json
+
+# Logs
+/storage/logs
+/storage/framework/cache
+/storage/framework/sessions
+/storage/framework/views
+/storage/framework/testing
+/storage/debugbar
+
+# Custom dodatak – da se više ne doda slučajno
+znr-lider2/
+
