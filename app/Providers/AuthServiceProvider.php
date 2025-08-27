@@ -26,6 +26,7 @@ class AuthServiceProvider extends ServiceProvider
         Fire::class          => OwnedPolicy::class,
         Category::class      => OwnedPolicy::class,
         Miscellaneous::class => OwnedPolicy::class,
+        Chemical::class      => OwnedPolicy::class,
 
         // Ako kasnije želiš dodati još “po korisniku” modele:
         // \App\Models\Chemical::class         => OwnedPolicy::class,

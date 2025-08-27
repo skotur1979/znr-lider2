@@ -3,25 +3,45 @@
 namespace App\Filament\Resources\ChemicalResource\Pages;
 
 use App\Filament\Resources\ChemicalResource;
-use Filament\Pages\Actions;
 use Filament\Resources\Pages\CreateRecord;
+use App\Enums\HazardStatement;
+use App\Enums\PrecautionaryStatement;
 
 class CreateChemical extends CreateRecord
 {
     protected static string $resource = ChemicalResource::class;
-    protected function mutateFormDataBeforeFill(array $data): array
-{
-    $validH = array_keys(HazardStatement::list());
-    $validP = array_keys(PrecautionaryStatement::list());
 
-    $data['h_statements'] = collect($data['h_statements'] ?? [])
-        ->filter(fn ($v) => is_string($v) && in_array($v, $validH, true))
-        ->values()->all();
+    /**
+     * Nakon uspješnog kreiranja vrati korisnika na listu.
+     * (izbjegavamo redirect na /edit koji ti je davao 404 kad zapis nije vidljiv u queryju)
+     */
+    protected function getRedirectUrl(): string
+    {
+        return static::getResource()::getUrl('index');
+    }
 
-    $data['p_statements'] = collect($data['p_statements'] ?? [])
-        ->filter(fn ($v) => is_string($v) && in_array($v, $validP, true))
-        ->values()->all();
+    /**
+     * Sanitiziraj podatke prije spremanja (H/P oznake moraju biti u dozvoljenim vrijednostima).
+     * Po želji osiguraj i user_id (ne smeta i ako to već radiš u Resource-u).
+     */
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        $validH = array_keys(HazardStatement::list());
+        $validP = array_keys(PrecautionaryStatement::list());
 
-    return $data;
-}
+        $data['h_statements'] = array_values(array_intersect(
+            (array) ($data['h_statements'] ?? []),
+            $validH
+        ));
+
+        $data['p_statements'] = array_values(array_intersect(
+            (array) ($data['p_statements'] ?? []),
+            $validP
+        ));
+
+        // safety-net; možeš ostaviti ili maknuti ako već radiš u Resource-u
+        $data['user_id'] = $data['user_id'] ?? auth()->id();
+
+        return $data;
+    }
 }
