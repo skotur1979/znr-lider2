@@ -9,10 +9,24 @@ class FirstAidKit extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['location', 'inspected_at', 'note'];
+    protected $fillable = [
+        'user_id',          // ⬅️ dodano
+        'location',
+        'inspected_at',
+        'note',
+    ];
+
+    protected $casts = [
+        'inspected_at' => 'date',
+    ];
 
     public function items()
     {
         return $this->hasMany(FirstAidItem::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }
