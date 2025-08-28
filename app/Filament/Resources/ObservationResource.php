@@ -13,14 +13,9 @@ use Filament\Resources\Table;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-<<<<<<< HEAD
-use App\Traits\AutoAssignsUser;
-use Illuminate\Support\Facades\Auth;
-=======
 use Illuminate\Support\Facades\Auth;
 use App\Traits\AutoAssignsUser;
 use Filament\Forms\Components\Hidden; // ⬅️ dodano
->>>>>>> Role-Zapazanja
 
 class ObservationResource extends Resource
 {
@@ -33,15 +28,6 @@ class ObservationResource extends Resource
     protected static ?string $label = 'Zapažanje';
     protected static ?string $pluralLabel = 'Zapažanja';
 
-<<<<<<< HEAD
-    /** Forma – ubacujemo user_id kroz AutoAssignsUser trait, a ostatak ide u additionalFormFields() */
-    public static function form(Form $form): Form
-    {
-        return static::assignUserField($form);
-    }
-
-    /** Sve tvoje postojeće form fieldove vraćamo ovdje */
-=======
     /** FORM – eksplicitno dodajemo user_id kao Hidden s default(Auth::id()) */
     public static function form(Form $form): Form
     {
@@ -51,7 +37,6 @@ class ObservationResource extends Resource
     }
 
     /** ostatak forme ostaje identičan – samo polja bez $form->schema() */
->>>>>>> Role-Zapazanja
     public static function additionalFormFields(): array
     {
         return [
@@ -246,31 +231,6 @@ class ObservationResource extends Resource
         ];
     }
 
-<<<<<<< HEAD
-    /** Badge neka broji “samo svoje” za korisnike; admin sve */
-    public static function getNavigationBadge(): ?string
-    {
-        $q = static::getModel()::query();
-        if (!Auth::user()?->isAdmin()) {
-            $q->where('user_id', Auth::id());
-        }
-        return (string) $q->count();
-    }
-
-    /** Kritično: scope-anje upita po useru (osim admina) + bez global soft-delete scopea */
-    public static function getEloquentQuery(): Builder
-    {
-        $query = parent::getEloquentQuery()->withoutGlobalScopes([SoftDeletingScope::class]);
-
-        if (Auth::user()?->isAdmin()) {
-            return $query;
-        }
-
-        return $query->where('user_id', Auth::id());
-    }
-
-    /** Da i global search poštuje isti scope */
-=======
      /** Admin vidi sve, korisnik samo svoje */
     public static function getEloquentQuery(): Builder
     {
@@ -281,13 +241,10 @@ class ObservationResource extends Resource
             : $q->where('user_id', Auth::id());
     }
 
->>>>>>> Role-Zapazanja
     public static function getGlobalSearchEloquentQuery(): Builder
     {
         return static::getEloquentQuery();
     }
-<<<<<<< HEAD
-=======
 
     public static function getNavigationBadge(): ?string
     {
@@ -310,5 +267,4 @@ class ObservationResource extends Resource
         $data['user_id'] = $data['user_id'] ?? Auth::id();
         return $data;
     }
->>>>>>> Role-Zapazanja
 }
