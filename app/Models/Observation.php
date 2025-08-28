@@ -11,6 +11,7 @@ class Observation extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'user_id',
         'incident_date',
         'observation_type',
         'location',
@@ -28,5 +29,9 @@ class Observation extends Model
         'incident_date' => 'date',
         'target_date' => 'date',
     ];
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
 

@@ -13,9 +13,13 @@ use Filament\Resources\Table;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Auth;
+use App\Traits\AutoAssignsUser;
+use Filament\Forms\Components\Hidden; // ⬅️ dodano
 
 class ObservationResource extends Resource
 {
+    use AutoAssignsUser;
     protected static ?string $model = Observation::class;
     protected static ?string $navigationIcon = 'heroicon-o-exclamation-circle';
     protected static ?string $navigationGroup = 'Moduli';
@@ -24,9 +28,18 @@ class ObservationResource extends Resource
     protected static ?string $label = 'Zapažanje';
     protected static ?string $pluralLabel = 'Zapažanja';
 
+    /** FORM – eksplicitno dodajemo user_id kao Hidden s default(Auth::id()) */
     public static function form(Form $form): Form
     {
-        return $form->schema([
+        return $form->schema(array_merge([
+            Hidden::make('user_id')->default(fn () => Auth::id()),
+        ], static::additionalFormFields()));
+    }
+
+    /** ostatak forme ostaje identičan – samo polja bez $form->schema() */
+    public static function additionalFormFields(): array
+    {
+        return [
             Forms\Components\DatePicker::make('incident_date')->label('Datum')->required(),
             Forms\Components\Select::make('observation_type')
                 ->label('Vrsta zapažanja')
@@ -91,7 +104,7 @@ class ObservationResource extends Resource
                 ])
                 ->required(),
             Forms\Components\Textarea::make('comments')->label('Komentar'),
-        ]);
+        ];
     }
 
     public static function table(Table $table): Table
@@ -177,7 +190,7 @@ class ObservationResource extends Resource
                 $query->whereYear('incident_date', $data['value']);
             }
         }),
-])
+            ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\ViewAction::make(),
@@ -218,15 +231,40 @@ class ObservationResource extends Resource
         ];
     }
 
-    public static function getNavigationBadge(): ?string
-    {
-        return static::getModel()::count();
-    }
-
+     /** Admin vidi sve, korisnik samo svoje */
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->withoutGlobalScopes([
-            SoftDeletingScope::class,
-        ]);
+        $q = parent::getEloquentQuery()->withoutGlobalScopes([SoftDeletingScope::class]);
+
+        return Auth::user()?->isAdmin()
+            ? $q
+            : $q->where('user_id', Auth::id());
+    }
+
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return static::getEloquentQuery();
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $q = static::getModel()::query();
+        if (! Auth::user()?->isAdmin()) {
+            $q->where('user_id', Auth::id());
+        }
+        return (string) $q->count();
+    }
+
+    /** Fallback da se user_id sigurno upiše */
+    public static function mutateFormDataBeforeCreate(array $data): array
+    {
+        $data['user_id'] = Auth::id();
+        return $data;
+    }
+
+    public static function mutateFormDataBeforeSave(array $data): array
+    {
+        $data['user_id'] = $data['user_id'] ?? Auth::id();
+        return $data;
     }
 }
