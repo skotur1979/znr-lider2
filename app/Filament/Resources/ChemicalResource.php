@@ -35,7 +35,6 @@ class ChemicalResource extends Resource
 
     protected static ?string $navigationGroup = 'Moduli';
 
-
     public static function form(Form $form): Form
     {
         return static::assignUserField($form);
@@ -211,15 +210,11 @@ TextColumn::make('p_statements')
             'edit' => Pages\EditChemical::route('/{record}/edit'),
         ];
     }
-
     /** Admin sve, korisnik samo svoje */
     public static function getEloquentQuery(): Builder
     {
         $q = parent::getEloquentQuery()->withoutGlobalScopes([SoftDeletingScope::class]);
-
-        return Auth::user()?->isAdmin()
-            ? $q
-            : $q->where('user_id', Auth::id());
+        return Auth::user()?->isAdmin() ? $q : $q->where('user_id', Auth::id());
     }
 
     public static function getGlobalSearchEloquentQuery(): Builder
@@ -227,12 +222,12 @@ TextColumn::make('p_statements')
         return static::getEloquentQuery();
     }
 
-    /** Scope po useru (osim admina) + bez globalnog soft-delete scopea */
-    public static function getEloquentQuery(): Builder
+    public static function getNavigationBadge(): ?string
     {
-        $q = parent::getEloquentQuery()->withoutGlobalScopes([SoftDeletingScope::class]);
-        return Auth::user()?->isAdmin() ? $q : $q->where('user_id', Auth::id());
+        $q = static::getModel()::query();
+        if (!Auth::user()?->isAdmin()) {
+            $q->where('user_id', Auth::id());
+        }
+        return (string) $q->count();
     }
-
-    
 }
