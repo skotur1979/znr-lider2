@@ -13,8 +13,14 @@ use Filament\Resources\Table;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+<<<<<<< HEAD
 use App\Traits\AutoAssignsUser;
 use Illuminate\Support\Facades\Auth;
+=======
+use Illuminate\Support\Facades\Auth;
+use App\Traits\AutoAssignsUser;
+use Filament\Forms\Components\Hidden; // ⬅️ dodano
+>>>>>>> Role-Zapazanja
 
 class ObservationResource extends Resource
 {
@@ -27,6 +33,7 @@ class ObservationResource extends Resource
     protected static ?string $label = 'Zapažanje';
     protected static ?string $pluralLabel = 'Zapažanja';
 
+<<<<<<< HEAD
     /** Forma – ubacujemo user_id kroz AutoAssignsUser trait, a ostatak ide u additionalFormFields() */
     public static function form(Form $form): Form
     {
@@ -34,6 +41,17 @@ class ObservationResource extends Resource
     }
 
     /** Sve tvoje postojeće form fieldove vraćamo ovdje */
+=======
+    /** FORM – eksplicitno dodajemo user_id kao Hidden s default(Auth::id()) */
+    public static function form(Form $form): Form
+    {
+        return $form->schema(array_merge([
+            Hidden::make('user_id')->default(fn () => Auth::id()),
+        ], static::additionalFormFields()));
+    }
+
+    /** ostatak forme ostaje identičan – samo polja bez $form->schema() */
+>>>>>>> Role-Zapazanja
     public static function additionalFormFields(): array
     {
         return [
@@ -187,7 +205,7 @@ class ObservationResource extends Resource
                 $query->whereYear('incident_date', $data['value']);
             }
         }),
-])
+            ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\ViewAction::make(),
@@ -228,6 +246,7 @@ class ObservationResource extends Resource
         ];
     }
 
+<<<<<<< HEAD
     /** Badge neka broji “samo svoje” za korisnike; admin sve */
     public static function getNavigationBadge(): ?string
     {
@@ -251,8 +270,45 @@ class ObservationResource extends Resource
     }
 
     /** Da i global search poštuje isti scope */
+=======
+     /** Admin vidi sve, korisnik samo svoje */
+    public static function getEloquentQuery(): Builder
+    {
+        $q = parent::getEloquentQuery()->withoutGlobalScopes([SoftDeletingScope::class]);
+
+        return Auth::user()?->isAdmin()
+            ? $q
+            : $q->where('user_id', Auth::id());
+    }
+
+>>>>>>> Role-Zapazanja
     public static function getGlobalSearchEloquentQuery(): Builder
     {
         return static::getEloquentQuery();
     }
+<<<<<<< HEAD
+=======
+
+    public static function getNavigationBadge(): ?string
+    {
+        $q = static::getModel()::query();
+        if (! Auth::user()?->isAdmin()) {
+            $q->where('user_id', Auth::id());
+        }
+        return (string) $q->count();
+    }
+
+    /** Fallback da se user_id sigurno upiše */
+    public static function mutateFormDataBeforeCreate(array $data): array
+    {
+        $data['user_id'] = Auth::id();
+        return $data;
+    }
+
+    public static function mutateFormDataBeforeSave(array $data): array
+    {
+        $data['user_id'] = $data['user_id'] ?? Auth::id();
+        return $data;
+    }
+>>>>>>> Role-Zapazanja
 }

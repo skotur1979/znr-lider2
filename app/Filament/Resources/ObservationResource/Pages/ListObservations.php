@@ -13,16 +13,12 @@ use App\Exports\ObservationsExport;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Facades\Auth;
+use App\Filament\Traits\AutoAssignsUser;
 
 class ListObservations extends ListRecords
 {
     protected static string $resource = ObservationResource::class;
-
-    // ✅ ispravan potpis metode
-    public function updatedTableFilters(): void
-    {
-        $this->dispatchBrowserEvent('refresh-header');
-    }
 
     protected function getHeaderActions(): array
     {
@@ -34,9 +30,16 @@ class ListObservations extends ListRecords
                 ->icon('heroicon-s-download')
                 ->color('warning')
                 ->action(function () {
-                    $observations = Observation::query()
-                        ->whereYear('incident_date', request()->input('tableFilters.godina.value', now()->year))
-                        ->get();
+                    $selectedYear = (int) (request()->input('tableFilters.godina_filter.value') ?: now()->year);
+
+                    $query = Observation::query()
+                        ->whereYear('incident_date', $selectedYear);
+
+                    if (! Auth::user()?->isAdmin()) {
+                        $query->where('user_id', Auth::id());
+                    }
+
+                    $observations = $query->get();
 
                     $pdf = Pdf::loadView('exports.observations-pdf', [
                         'observations' => $observations,
@@ -67,24 +70,28 @@ class ListObservations extends ListRecords
     }
 
     protected function getHeader(): ?View
-{
-    $filter = request()->input('tableFilters.godina_filter.value');
-    $selectedYear = is_numeric($filter) ? intval($filter) : now()->year;
+    {
+        $filter = request()->input('tableFilters.godina_filter.value');
+        $selectedYear = is_numeric($filter) ? (int) $filter : now()->year;
 
-    $query = Observation::query()->whereYear('incident_date', $selectedYear);
+        $query = Observation::query()->whereYear('incident_date', $selectedYear);
 
-    $ukupno = (clone $query)->count();
-    $nijeZapoceto = (clone $query)->where('status', 'Not started')->count();
-    $uTijeku = (clone $query)->where('status', 'In progress')->count();
-    $zavrseno = (clone $query)->where('status', 'Complete')->count();
+        if (! Auth::user()?->isAdmin()) {
+            $query->where('user_id', Auth::id());
+        }
 
-    return view('components.observations-header', [
-        'selectedYear' => $selectedYear,
-        'ukupno' => $ukupno,
-        'nijeZapoceto' => $nijeZapoceto,
-        'uTijeku' => $uTijeku,
-        'zavrseno' => $zavrseno,
-        'actions' => $this->getHeaderActions(),
-    ]);
-}
+        $ukupno       = (clone $query)->count();
+        $nijeZapoceto = (clone $query)->where('status', 'Not started')->count();
+        $uTijeku      = (clone $query)->where('status', 'In progress')->count();
+        $zavrseno     = (clone $query)->where('status', 'Complete')->count();
+
+        return view('components.observations-header', [
+            'selectedYear' => $selectedYear,
+            'ukupno'       => $ukupno,
+            'nijeZapoceto' => $nijeZapoceto,
+            'uTijeku'      => $uTijeku,
+            'zavrseno'     => $zavrseno,
+            'actions'      => $this->getActions(),
+        ]);
+    }
 }
