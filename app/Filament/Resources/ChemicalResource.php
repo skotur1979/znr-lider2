@@ -35,13 +35,12 @@ class ChemicalResource extends Resource
 
     protected static ?string $navigationGroup = 'Moduli';
 
-    /** Forma – user_id ide kroz AutoAssignsUser */
+
     public static function form(Form $form): Form
     {
         return static::assignUserField($form);
     }
 
-    /** Ostatak polja forme */
     public static function additionalFormFields(): array
     {
         return [
@@ -212,14 +211,20 @@ TextColumn::make('p_statements')
             'edit' => Pages\EditChemical::route('/{record}/edit'),
         ];
     }
-    /** Badge broji “samo moje” osim za admina */
-    public static function getNavigationBadge(): ?string
+
+    /** Admin sve, korisnik samo svoje */
+    public static function getEloquentQuery(): Builder
     {
-        $q = static::getModel()::query();
-        if (!Auth::user()?->isAdmin()) {
-            $q->where('user_id', Auth::id());
-        }
-        return (string) $q->count();
+        $q = parent::getEloquentQuery()->withoutGlobalScopes([SoftDeletingScope::class]);
+
+        return Auth::user()?->isAdmin()
+            ? $q
+            : $q->where('user_id', Auth::id());
+    }
+
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return static::getEloquentQuery();
     }
 
     /** Scope po useru (osim admina) + bez globalnog soft-delete scopea */
@@ -229,9 +234,5 @@ TextColumn::make('p_statements')
         return Auth::user()?->isAdmin() ? $q : $q->where('user_id', Auth::id());
     }
 
-    /** Global search također poštuje scope */
-    public static function getGlobalSearchEloquentQuery(): Builder
-    {
-        return static::getEloquentQuery();
-    }
+    
 }
