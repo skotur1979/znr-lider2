@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\IncidentResource\Pages;
-use App\Filament\Resources\IncidentResource\RelationManagers;
 use App\Models\Incident;
 use Filament\Forms;
 use Filament\Resources\Form;
@@ -13,22 +12,17 @@ use Filament\Tables;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Components\{TextInput, Select, DatePicker, FileUpload, Textarea};
-use Filament\Tables\Columns\{TextColumn, ImageColumn};
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Filament\Tables\Filters\Filter;
-use Filament\Tables\Actions\Action;
-use Filament\Tables\Actions\{EditAction, DeleteAction};
-use App\Models\Observation;
-use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Columns\{TextColumn, ImageColumn, BadgeColumn};
+use Filament\Tables\Filters\{SelectFilter, Filter};
 use Illuminate\Support\Facades\Auth;
 use App\Traits\AutoAssignsUser;
 
+
 class IncidentResource extends Resource
 {
-    use AutoAssignsUser;
+    use AutoAssignsUser; // ⬅️ ako već koristiš ovaj trait
+  
+
     protected static ?string $model = Incident::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-eye';
@@ -271,7 +265,7 @@ TextInput::make('working_days_lost')
         ];
     }
 
-    /** Scope po useru (osim admina) + bez globalnog soft-delete scopea */
+ /** Scope po useru (osim admina) + bez globalnog soft-delete scopea */
     public static function getEloquentQuery(): Builder
     {
         $q = parent::getEloquentQuery()->withoutGlobalScopes([SoftDeletingScope::class]);
