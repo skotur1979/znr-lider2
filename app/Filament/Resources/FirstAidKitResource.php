@@ -21,9 +21,14 @@ use Filament\Tables\Columns\ViewColumn;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\DeleteBulkAction;
+use Illuminate\Support\Facades\Auth;
+use App\Traits\AutoAssignsUser;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+
 
 class FirstAidKitResource extends Resource
 {
+    use AutoAssignsUser;
     protected static ?string $model = FirstAidKit::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-plus-circle';
@@ -33,9 +38,13 @@ class FirstAidKitResource extends Resource
     protected static ?int $navigationSort = 5;
 
     public static function form(Form $form): Form
-    {
-        return $form
-            ->schema([
+{
+    return static::assignUserField($form);
+}
+
+public static function additionalFormFields(): array
+{
+    return [
                 Section::make('Sanitetski materijal za prvu pomoć')
                     ->schema([
                         TextInput::make('location')->label('Lokacija ormarića PP')->required(),
@@ -57,7 +66,7 @@ class FirstAidKitResource extends Resource
                             ->createItemButtonLabel('Dodaj stavku')
                             ->defaultItems(1),
                     ]),
-            ]);
+            ];
     }
 
     public static function table(Table $table): Table
@@ -105,12 +114,40 @@ class FirstAidKitResource extends Resource
         ];
 
     }
-    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
-{
-    return parent::getEloquentQuery()->with('items');
-}
-public static function getNavigationBadge(): ?string
+    /** Admin vidi sve, korisnik samo svoje */
+    public static function getEloquentQuery(): Builder
     {
-        return static::getModel()::count();
+        $q = parent::getEloquentQuery()->withoutGlobalScopes([SoftDeletingScope::class]);
+
+        return Auth::user()?->isAdmin()
+            ? $q
+            : $q->where('user_id', Auth::id());
+    }
+
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return static::getEloquentQuery();
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $q = static::getModel()::query();
+        if (!Auth::user()?->isAdmin()) {
+            $q->where('user_id', Auth::id());
+        }
+        return (string) $q->count();
+    }
+
+    /** dodatna sigurnost da se user_id upiše pri kreiranju i update-u */
+    public static function mutateFormDataBeforeCreate(array $data): array
+    {
+        $data['user_id'] = Auth::id();
+        return $data;
+    }
+
+    public static function mutateFormDataBeforeSave(array $data): array
+    {
+        $data['user_id'] = $data['user_id'] ?? Auth::id();
+        return $data;
     }
 }

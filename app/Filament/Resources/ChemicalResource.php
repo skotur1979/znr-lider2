@@ -20,7 +20,10 @@ use Filament\Tables\Filters\TrashedFilter;
 use App\Enums\HazardStatement;
 use App\Enums\PrecautionaryStatement;
 use Filament\Forms\Components\Select;
+<<<<<<< HEAD
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+=======
+>>>>>>> origin/main
 use Illuminate\Support\Facades\Auth;
 use App\Traits\AutoAssignsUser;
 
@@ -36,13 +39,20 @@ class ChemicalResource extends Resource
 
     protected static ?string $navigationGroup = 'Moduli';
 
+<<<<<<< HEAD
      /** OVDJE ide schema(Form) i poziva trait koji će dodati user_id + pozvati additionalFormFields() */
+=======
+
+>>>>>>> origin/main
     public static function form(Form $form): Form
     {
         return static::assignUserField($form);
     }
 
+<<<<<<< HEAD
     /** OVDJE VRAĆAŠ SAMO ARRAY POLJA – BEZ $form->schema(...) */
+=======
+>>>>>>> origin/main
     public static function additionalFormFields(): array
     {
         return [
@@ -213,6 +223,10 @@ TextColumn::make('p_statements')
             'edit' => Pages\EditChemical::route('/{record}/edit'),
         ];
     }
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/main
     /** Admin sve, korisnik samo svoje */
     public static function getEloquentQuery(): Builder
     {
@@ -228,6 +242,7 @@ TextColumn::make('p_statements')
         return static::getEloquentQuery();
     }
 
+<<<<<<< HEAD
     public static function getNavigationBadge(): ?string
     {
         $q = static::getModel()::query();
@@ -248,4 +263,14 @@ public static function mutateFormDataBeforeSave(array $data): array
     $data['user_id'] = $data['user_id'] ?? Auth::id();
     return $data;
 }
+=======
+    /** Scope po useru (osim admina) + bez globalnog soft-delete scopea */
+    public static function getEloquentQuery(): Builder
+    {
+        $q = parent::getEloquentQuery()->withoutGlobalScopes([SoftDeletingScope::class]);
+        return Auth::user()?->isAdmin() ? $q : $q->where('user_id', Auth::id());
+    }
+
+    
+>>>>>>> origin/main
 }

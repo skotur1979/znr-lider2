@@ -27,6 +27,12 @@ class AuthServiceProvider extends ServiceProvider
         Category::class      => OwnedPolicy::class,
         Miscellaneous::class => OwnedPolicy::class,
         Chemical::class      => OwnedPolicy::class,
+<<<<<<< HEAD
+=======
+        FirstAidKit::class   => OwnedPolicy::class,
+        Observation::class   => OwnedPolicy::class,
+
+>>>>>>> origin/main
 
         // Ako kasnije želiš dodati još “po korisniku” modele:
         // \App\Models\Chemical::class         => OwnedPolicy::class,
