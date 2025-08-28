@@ -23,6 +23,8 @@ use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\DeleteBulkAction;
 use Illuminate\Support\Facades\Auth;
 use App\Traits\AutoAssignsUser;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+
 
 class FirstAidKitResource extends Resource
 {

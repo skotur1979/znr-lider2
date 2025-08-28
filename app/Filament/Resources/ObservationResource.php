@@ -13,9 +13,12 @@ use Filament\Resources\Table;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use App\Traits\AutoAssignsUser;
+use Illuminate\Support\Facades\Auth;
 
 class ObservationResource extends Resource
 {
+    use AutoAssignsUser;
     protected static ?string $model = Observation::class;
     protected static ?string $navigationIcon = 'heroicon-o-exclamation-circle';
     protected static ?string $navigationGroup = 'Moduli';
@@ -24,9 +27,16 @@ class ObservationResource extends Resource
     protected static ?string $label = 'Zapažanje';
     protected static ?string $pluralLabel = 'Zapažanja';
 
+    /** Forma – ubacujemo user_id kroz AutoAssignsUser trait, a ostatak ide u additionalFormFields() */
     public static function form(Form $form): Form
     {
-        return $form->schema([
+        return static::assignUserField($form);
+    }
+
+    /** Sve tvoje postojeće form fieldove vraćamo ovdje */
+    public static function additionalFormFields(): array
+    {
+        return [
             Forms\Components\DatePicker::make('incident_date')->label('Datum')->required(),
             Forms\Components\Select::make('observation_type')
                 ->label('Vrsta zapažanja')
@@ -91,7 +101,7 @@ class ObservationResource extends Resource
                 ])
                 ->required(),
             Forms\Components\Textarea::make('comments')->label('Komentar'),
-        ]);
+        ];
     }
 
     public static function table(Table $table): Table
@@ -218,15 +228,31 @@ class ObservationResource extends Resource
         ];
     }
 
+    /** Badge neka broji “samo svoje” za korisnike; admin sve */
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::count();
+        $q = static::getModel()::query();
+        if (!Auth::user()?->isAdmin()) {
+            $q->where('user_id', Auth::id());
+        }
+        return (string) $q->count();
     }
 
+    /** Kritično: scope-anje upita po useru (osim admina) + bez global soft-delete scopea */
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->withoutGlobalScopes([
-            SoftDeletingScope::class,
-        ]);
+        $query = parent::getEloquentQuery()->withoutGlobalScopes([SoftDeletingScope::class]);
+
+        if (Auth::user()?->isAdmin()) {
+            return $query;
+        }
+
+        return $query->where('user_id', Auth::id());
+    }
+
+    /** Da i global search poštuje isti scope */
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return static::getEloquentQuery();
     }
 }
