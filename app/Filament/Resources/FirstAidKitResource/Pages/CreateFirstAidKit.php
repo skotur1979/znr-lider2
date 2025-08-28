@@ -13,4 +13,17 @@ class CreateFirstAidKit extends CreateRecord
     {
         return 'Nova Prva Pomoć';
     }
+
+    // ⬇⬇⬇ OVIME 100% upisujemo vlasnika prije spremanja
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        $data['user_id'] = auth()->id();
+        return $data;
+    }
+
+    // (opcionalno) dok sve ne profunkcionira, idi na listu umjesto /{record}/edit:
+    // protected function getRedirectUrl(): string
+    // {
+    //     return static::getResource()::getUrl('index');
+    // }
 }

@@ -23,10 +23,12 @@ use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\{EditAction, DeleteAction};
 use App\Models\Observation;
 use Filament\Tables\Columns\BadgeColumn;
-
+use Illuminate\Support\Facades\Auth;
+use App\Traits\AutoAssignsUser;
 
 class IncidentResource extends Resource
 {
+    use AutoAssignsUser;
     protected static ?string $model = Incident::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-eye';
@@ -37,9 +39,16 @@ class IncidentResource extends Resource
     protected static ?int $navigationSort = 8;
     protected static ?string $pluralLabel = 'Incidenti';
 
+    /** Forma – user_id automatski */
     public static function form(Form $form): Form
-{
-    return $form->schema([
+    {
+        return static::assignUserField($form);
+    }
+
+    /** Ostatak polja forme */
+    public static function additionalFormFields(): array
+    {
+        return [
         TextInput::make('location')->label('Lokacija')
             ->required(),
 
@@ -134,7 +143,7 @@ TextInput::make('working_days_lost')
                 ->send();
     }
     }),
-    ]);
+    ];
             
 }
 
@@ -262,12 +271,26 @@ TextInput::make('working_days_lost')
         ];
     }
 
+    /** Scope po useru (osim admina) + bez globalnog soft-delete scopea */
     public static function getEloquentQuery(): Builder
-{
-    return parent::getEloquentQuery()->withoutGlobalScopes(); // bez withTrashed
-}
+    {
+        $q = parent::getEloquentQuery()->withoutGlobalScopes([SoftDeletingScope::class]);
+        return Auth::user()?->isAdmin() ? $q : $q->where('user_id', Auth::id());
+    }
+
+    /** Badge broji “samo moje” osim za admina */
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::count();
+        $q = static::getModel()::query();
+        if (!Auth::user()?->isAdmin()) {
+            $q->where('user_id', Auth::id());
+        }
+        return (string) $q->count();
+    }
+
+    /** Global search scope */
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return static::getEloquentQuery();
     }
 }
