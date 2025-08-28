@@ -21,6 +21,8 @@ use App\Traits\AutoAssignsUser;
 class IncidentResource extends Resource
 {
     use AutoAssignsUser; // ⬅️ ako već koristiš ovaj trait
+  
+
     protected static ?string $model = Incident::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-eye';
@@ -31,9 +33,16 @@ class IncidentResource extends Resource
     protected static ?int $navigationSort = 8;
     protected static ?string $pluralLabel = 'Incidenti';
 
+    /** Forma – user_id automatski */
     public static function form(Form $form): Form
-{
-    return $form->schema([
+    {
+        return static::assignUserField($form);
+    }
+
+    /** Ostatak polja forme */
+    public static function additionalFormFields(): array
+    {
+        return [
         TextInput::make('location')->label('Lokacija')
             ->required(),
 
@@ -128,7 +137,7 @@ TextInput::make('working_days_lost')
                 ->send();
     }
     }),
-    ]);
+    ];
             
 }
 
@@ -256,35 +265,26 @@ TextInput::make('working_days_lost')
         ];
     }
 
-    // (A) upit: admin sve, korisnik samo svoje
-public static function getEloquentQuery(): Builder
-{
-    $q = parent::getEloquentQuery()
-        ->withoutGlobalScopes([SoftDeletingScope::class]);
-
-    return Auth::user()?->isAdmin()
-        ? $q
-        : $q->where('user_id', Auth::id());
-}
-
-// (B) kod kreiranja upiši user_id (ako nemaš AutoAssignsUser tu)
-public static function mutateFormDataBeforeCreate(array $data): array
-{
-    $data['user_id'] = Auth::id();
-    return $data;
-}
-
-// (C) (opcionalno) global search i badge da prate isto
-public static function getGlobalSearchEloquentQuery(): Builder
-{
-    return static::getEloquentQuery();
-}
-public static function getNavigationBadge(): ?string
-{
-    $q = static::getModel()::query();
-    if (! Auth::user()?->isAdmin()) {
-        $q->where('user_id', Auth::id());
+ /** Scope po useru (osim admina) + bez globalnog soft-delete scopea */
+    public static function getEloquentQuery(): Builder
+    {
+        $q = parent::getEloquentQuery()->withoutGlobalScopes([SoftDeletingScope::class]);
+        return Auth::user()?->isAdmin() ? $q : $q->where('user_id', Auth::id());
     }
-    return (string) $q->count();
-}
+
+    /** Badge broji “samo moje” osim za admina */
+    public static function getNavigationBadge(): ?string
+    {
+        $q = static::getModel()::query();
+        if (!Auth::user()?->isAdmin()) {
+            $q->where('user_id', Auth::id());
+        }
+        return (string) $q->count();
+    }
+
+    /** Global search scope */
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return static::getEloquentQuery();
+    }
 }

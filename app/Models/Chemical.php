@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Chemical extends Model
 {
     use HasFactory, SoftDeletes;
-protected $fillable = [
+
+    protected $fillable = [
+        'user_id',           // ⬅️ OVO DODAJ
         'product_name',
         'cas_number',
         'ufi_number',
@@ -38,6 +40,10 @@ protected $fillable = [
             'attachments' => 'nullable|file|mimes:pdf|max:20240',
             'pdf' => 'nullable|file|mimes:pdf|max:20240',
         ];
+    }
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }
 
