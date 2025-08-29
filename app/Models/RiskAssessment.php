@@ -10,9 +10,14 @@ class RiskAssessment extends Model
     use HasFactory;
 
     protected $fillable = [
-        'tvrtka', 'oib_tvrtke', 'adresa_tvrtke',
+        'user_id','tvrtka', 'oib_tvrtke', 'adresa_tvrtke',
         'broj_procjene', 'datum_izrade', 'vrsta_procjene',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function participants()
     {

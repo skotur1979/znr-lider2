@@ -9,6 +9,7 @@ class DocumentationItem extends Model
 {
     use HasFactory;
     protected $fillable = [
+    'user_id',
     'naziv',
     'tvrtka',
     'datum_izrade',
@@ -21,4 +22,8 @@ class DocumentationItem extends Model
 protected $casts = [
     'prilozi' => 'array',
 ];
+public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

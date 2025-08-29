@@ -14,9 +14,12 @@ use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Actions\{ViewAction, EditAction, DeleteAction};
 use Filament\Tables\Actions\DeleteBulkAction;
+use Illuminate\Support\Facades\Auth;
+use App\Traits\AutoAssignsUser; // ✅ ispravan trait namespace
 
 class RiskAssessmentResource extends Resource
 {
+    use AutoAssignsUser;
     protected static ?string $model = RiskAssessment::class;
     protected static ?string $navigationIcon = 'heroicon-o-clipboard';
     protected static ?string $pluralModelLabel = 'Procjene rizika';
@@ -25,18 +28,32 @@ class RiskAssessmentResource extends Resource
     protected static ?string $modelLabel = 'Procjene rizika';
 
 
-    protected static ?int $navigationSort = 1;
-
     public static function getEloquentQuery(): Builder
-{
-    return parent::getEloquentQuery()
-        ->with(['participants', 'revisions', 'attachments']);
-}
+    {
+        $query = parent::getEloquentQuery()
+            ->with(['participants', 'revisions', 'attachments']);
 
+        if (Auth::user()?->isAdmin()) {
+            return $query;
+        }
+
+        return $query->where('user_id', Auth::id());
+    }
+
+    /**
+     * Forma: trait će ubaciti hidden user_id i spojiti fields iz additionalFormFields()
+     */
     public static function form(Form $form): Form
     {
-        return $form
-    ->schema([
+        return static::assignUserField($form);
+    }
+
+    /**
+     * Polja forme (tvoja postojeća sekcijska shema)
+     */
+    public static function additionalFormFields(): array
+    {
+        return [
 
         // 🔷 Sekcija: Podaci o procjeni rizika
         Forms\Components\Section::make('Podaci o procjeni rizika')
@@ -103,7 +120,7 @@ class RiskAssessmentResource extends Resource
             ])
             ->collapsible(),
 
-    ]);
+    ];
     }
 
     public static function table(Table $table): Table
@@ -147,6 +164,15 @@ class RiskAssessmentResource extends Resource
     }
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::count();
+        $q = static::getModel()::query();
+        if (! Auth::user()?->isAdmin()) {
+            $q->where('user_id', Auth::id());
+        }
+        return (string) $q->count();
+    }
+
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return static::getEloquentQuery();
     }
 }
