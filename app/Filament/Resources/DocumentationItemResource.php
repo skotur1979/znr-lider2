@@ -22,9 +22,12 @@ use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Actions\DeleteBulkAction;
+use Illuminate\Support\Facades\Auth;
+use App\Traits\AutoAssignsUser; // isti trait kao u ostalim modulima
 
 class DocumentationItemResource extends Resource
 {
+    use AutoAssignsUser;
     protected static ?string $model = DocumentationItem::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-collection';
@@ -32,12 +35,29 @@ class DocumentationItemResource extends Resource
     protected static ?string $pluralModelLabel = 'Dokumentacija';
     protected static ?int $navigationSort = 11;
 
-    protected static ?string $navigationGroup = 'Moduli';
+    // Admin vidi sve, ostali samo svoje
+    public static function getEloquentQuery(): Builder
+    {
+        $q = parent::getEloquentQuery();
 
-   public static function form(Form $form): Form
-{
-    return $form
-        ->schema([
+        if (Auth::user()?->isAdmin()) {
+            return $q;
+        }
+
+        return $q->where('user_id', Auth::id());
+    }
+
+    public static function form(Form $form): Form
+    {
+        // trait će ubaciti hidden user_id + tvoja polja
+        return static::assignUserField(
+            $form->schema(static::additionalFormFields())
+        );
+    }
+
+    public static function additionalFormFields(): array
+    {
+        return [
             TextInput::make('naziv')->label('Naziv dokumenta')->required(),
             TextInput::make('tvrtka')->label('Tvrtka'),
             DatePicker::make('datum_izrade')->label('Datum izrade'),
@@ -87,7 +107,7 @@ class DocumentationItemResource extends Resource
                         ->send();
                 }
             }),
-        ]);
+        ];
 }
 
     public static function table(Table $table): Table
@@ -135,6 +155,15 @@ class DocumentationItemResource extends Resource
     }    
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::count();
+        $q = static::getModel()::query();
+        if (! Auth::user()?->isAdmin()) {
+            $q->where('user_id', Auth::id());
+        }
+        return (string) $q->count();
+    }
+
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return static::getEloquentQuery();
     }
 }
