@@ -12,9 +12,14 @@ use Filament\Forms\Components\{
 use Filament\Resources\{Form, Resource, Table};
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Support\HtmlString;
+use App\Traits\AutoAssignsUser;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class MedicalReferralResource extends Resource
 {
+    use AutoAssignsUser;          // ← DODANO
     protected static ?string $model = MedicalReferral::class;
 
     protected static ?string $navigationIcon   = 'heroicon-o-document-text';
@@ -23,6 +28,62 @@ class MedicalReferralResource extends Resource
     protected static ?string $pluralModelLabel = 'RA-1 Uputnice';
     protected static ?string $modelLabel       = 'RA-1 Uputnica';
 
+    private static function isAdminUser($user): bool
+{
+    if (! $user) return false;
+
+    // 0) Super fallback: korisnik #1 = admin
+    if ((int) $user->id === 1) return true;
+
+    // 1) Spatie roles: ako postoje
+    try {
+        if (method_exists($user, 'getRoleNames')) {
+            $roles = $user->getRoleNames()->toArray(); // Collection -> array
+            foreach ($roles as $r) {
+                $name = trim((string) $r);
+                // hvataj sve “admin” varijante i sinonime
+                if (
+                    Str::contains(Str::lower($name), 'admin') ||
+                    in_array(Str::lower($name), ['administrator', 'super-admin', 'super admin', 'owner', 'root'])
+                ) {
+                    return true;
+                }
+            }
+        }
+        if (method_exists($user, 'hasAnyRole')) {
+            if ($user->hasAnyRole([
+                'admin', 'Admin', 'administrator', 'Administrator',
+                'super-admin', 'Super Admin', 'owner', 'Owner', 'root', 'Root',
+            ])) {
+                return true;
+            }
+        }
+        if (method_exists($user, 'hasRole')) {
+            foreach (['admin','Admin','administrator','Administrator','super-admin','Super Admin','owner','Owner','root','Root'] as $r) {
+                if ($user->hasRole($r)) return true;
+            }
+        }
+    } catch (\Throwable $e) {
+        // ignore
+    }
+
+    // 2) Flag na modelu (ako postoji)
+    if (isset($user->is_admin) && (bool) $user->is_admin) {
+        return true;
+    }
+
+    // 3) Policy / permissions — ako imaš definirano u AuthServiceProvideru/Policy-ju
+    try {
+        if (method_exists($user, 'can') && $user->can('viewAny', \App\Models\MedicalReferral::class)) {
+            return true;
+        }
+    } catch (\Throwable $e) {
+        // ignore
+    }
+
+    return false;
+}
+    /** Lista / forma */
     public static function form(Form $form): Form
     {
         return $form->schema([
@@ -318,4 +379,39 @@ class MedicalReferralResource extends Resource
             'view'   => Pages\ViewMedicalReferral::route('/{record}'),
         ];
     }
+    /** Scope: admin sve, ostali samo svoje */
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user  = auth()->user();
+
+        if (! $user) {
+            return $query->whereRaw('1=0');
+        }
+
+        return self::isAdminUser($user)
+            ? $query
+            : $query->where('user_id', $user->id);
+    }
+
+    /** Badge da prati isti scope kao i tablica */
+    public static function getNavigationBadge(): ?string
+    {
+        $user = auth()->user();
+        if (! $user) return '0';
+
+        $q = static::getModel()::query();
+        if (! self::isAdminUser($user)) {
+            $q->where('user_id', $user->id);
+        }
+
+        return (string) $q->count();
+    }
+
+
+public static function getGlobalSearchEloquentQuery(): Builder
+{
+    return static::getEloquentQuery();
+}
+
 }
