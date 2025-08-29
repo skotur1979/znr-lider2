@@ -34,6 +34,7 @@ class AuthServiceProvider extends ServiceProvider
         DocumentationItem::class => OwnedPolicy::class,
         RiskAssessment::class => OwnedPolicy::class,
         RiskAttachment::class => OwnedPolicy::class,
+        MedicalRefferal::class => OwnedPolicy::class,
         
 
         // Ako kasnije želiš dodati još “po korisniku” modele:

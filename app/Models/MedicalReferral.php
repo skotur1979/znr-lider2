@@ -10,6 +10,7 @@ class MedicalReferral extends Model
     use HasFactory;
 
     protected $fillable = [
+    'user_id',
     'employee_id',
     'name_of_parents',
     'law_reference1',
@@ -67,13 +68,27 @@ class MedicalReferral extends Model
     
     ];
 
-    public function employee()
-{
-    return $this->belongsTo(\App\Models\Employee::class);
-}
+    protected static function booted(): void
+    {
+        static::creating(function (self $model) {
+            if (auth()->check() && empty($model->user_id)) {
+                $model->user_id = auth()->id();
+            }
+        });
+    }
 
-public function getDisplayNameAttribute(): string
-{
-    return $this->employee->name ?? (string) $this->full_name;
-}
+    public function employee()
+    {
+        return $this->belongsTo(\App\Models\Employee::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(\App\Models\User::class);
+    }
+
+    public function getDisplayNameAttribute(): string
+    {
+        return $this->employee->name ?? (string) $this->full_name;
+    }
 }
