@@ -128,7 +128,7 @@ class PersonalProtectiveEquipmentLogResource extends Resource
         'istek' => 'Samo OZO s istekom u 30 dana',
         'deaktivirani' => 'Deaktivirani',
     ])
-    ->default('svi')
+    //->default('svi')
     ->placeholder('Odaberi...') // Ovo se prikazuje, ali neće biti prihvaćeno u query
     ->query(function (Builder $query, array $data): Builder {
         return match ($data['value'] ?? 'svi') {

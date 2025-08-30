@@ -16,6 +16,8 @@ class PersonalProtectiveEquipmentItem extends Model
         'size',
         'duration_months',
         'issue_date',
+        'standard', 
+        'return_date',
         'end_date',
         'signature',
     ];

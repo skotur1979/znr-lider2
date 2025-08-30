@@ -6,12 +6,16 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Resources\Table;
 use Filament\Resources\Form;
 use Filament\Forms;
-use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\{TextColumn, BadgeColumn, ImageColumn};
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\View;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Actions\{EditAction, DeleteAction, Action, CreateAction};
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 
 class ItemsRelationManager extends RelationManager
 {
@@ -41,50 +45,127 @@ class ItemsRelationManager extends RelationManager
         'Zaštitna polumaska s filterima',
     ]),
 
-        TextInput::make('standard')->label('HRN EN'), // NOVO
-        TextInput::make('size')->label('Veličina'),
-        TextInput::make('duration_months')->label('Rok uporabe (mjeseci)'),
-        DatePicker::make('issue_date')->label('Datum izdavanja'),
-        DatePicker::make('end_date')->label('Datum isteka'),
-        View::make('filament.components.signature-pad')->label('Unos potpisa'),
+        TextInput::make('standard')->label('HRN EN')->maxLength(64),
+                TextInput::make('size')->label('Veličina')->maxLength(20),
 
-FileUpload::make('signature')
-    ->label('Spremi potpisanu sliku ovdje')
-    ->directory('signatures')
-    ->visibility('public')
-    ->image()
-    ->maxSize(2048)
-    ->columnSpanFull(),
-        DatePicker::make('return_date')->label('Datum vraćanja'), // NOVO
-    ]);
-}
+                TextInput::make('duration_months')
+                    ->label('Rok uporabe (mjeseci)')
+                    ->numeric()->minValue(0)->maxValue(120)
+                    ->reactive()
+                    ->afterStateUpdated(fn ($state, $set, $get) => self::recalcEndDate($set, $get)),
+
+                DatePicker::make('issue_date')
+                    ->label('Datum izdavanja')
+                    ->required()
+                    ->reactive()
+                    ->afterStateUpdated(fn ($state, $set, $get) => self::recalcEndDate($set, $get)),
+
+                // Prikaz izračunatog isteka (sprema se kroz model saving hook)
+                DatePicker::make('end_date')
+                    ->label('Datum isteka')
+                    ->disabled()
+                    ->dehydrated(false)
+                    ->helperText('Automatski izračun iz “Izdano” + “Rok (mjeseci)”.'),
+
+                // Tvoj signature pad view (ako ga koristiš)
+                View::make('filament.components.signature-pad')->label('Unos potpisa'),
+
+                FileUpload::make('signature')
+                    ->label('Spremi potpisanu sliku ovdje')
+                    ->directory('signatures')
+                    ->visibility('public')
+                    ->image()
+                    ->maxSize(2048)
+                    ->columnSpanFull(),
+
+                DatePicker::make('return_date')->label('Datum vraćanja'),
+            ])->columns(4);
+    }
+
+    /** Izračun end_date u form state-u (radi prikaza). Stvarno spremanje radi model saving hook. */
+    protected static function recalcEndDate(callable $set, callable $get): void
+    {
+        $issue  = $get('issue_date');
+        $months = (int) $get('duration_months');
+        if ($issue && $months > 0) {
+            $set('end_date', Carbon::parse($issue)->addMonths($months)->format('Y-m-d'));
+        } else {
+            $set('end_date', null);
+        }
+    }
 
 
     public static function table(Table $table): Table
 {
     return $table
-        ->columns([
-            TextColumn::make('equipment_name')->label('Naziv OZO'),
-TextColumn::make('standard')->label('HRN EN'),
-TextColumn::make('size')->label('Veličina'),
-TextColumn::make('duration_months')->label('Rok (mjeseci)'),
-TextColumn::make('issue_date')->label('Izdano')->date(),
-TextColumn::make('end_date')->label('Istek')->date(),
+            ->columns([
+                TextColumn::make('equipment_name')->label('Naziv OZO')->searchable()->weight('semibold'),
+                TextColumn::make('standard')->label('HRN EN')->toggleable(),
+                TextColumn::make('size')->label('Veličina')->alignCenter(),
+                TextColumn::make('duration_months')->label('Rok (mjeseci)')->alignCenter(),
+                TextColumn::make('issue_date')->label('Izdano')->date('d.m.Y.')->alignCenter(),
 
-\Filament\Tables\Columns\ImageColumn::make('signature')
-    ->label('Potpis')
-    ->disk('public')
-    ->height(40)
-    ->width(100),
+                BadgeColumn::make('end_date')
+    ->label('Istek')
+    ->formatStateUsing(function ($state) {
+        if (blank($state)) return '—';
+        $dt = $state instanceof Carbon ? $state : Carbon::parse($state);
+        return $dt->format('d.m.Y.');
+    })
+    ->colors([
+        'success' => function ($state) {
+            if (blank($state)) return false;
+            $dt = $state instanceof Carbon ? $state : Carbon::parse($state);
+            return $dt->gt(today()->addDays(30));
+        },
+        'warning' => function ($state) {
+            if (blank($state)) return false;
+            $dt = $state instanceof Carbon ? $state : Carbon::parse($state);
+            return $dt->gte(today()) && $dt->lte(today()->addDays(30));
+        },
+        'danger' => function ($state) {
+            if (blank($state)) return false;
+            $dt = $state instanceof Carbon ? $state : Carbon::parse($state);
+            return $dt->lt(today());
+        },
+    ])
+    ->icon('heroicon-o-clock')
+    ->alignCenter(),
 
-TextColumn::make('return_date')->label('Datum vraćanja')->date(),
-        ])
+                TextColumn::make('return_date')->label('Datum vraćanja')->date('d.m.Y.')->alignCenter()->toggleable(),
+
+                ImageColumn::make('signature')
+                    ->label('Potpis')
+                    ->disk('public')
+                    ->height(40)
+                    ->width(100)
+                    ->toggleable(),
+            ])
+            ->filters([
+                Filter::make('isteklo')->label('Isteklo')
+                    ->query(fn (Builder $q) => $q->whereNotNull('end_date')->where('end_date', '<', today())),
+                Filter::make('uskoro')->label('Uskoro ističe (≤30d)')
+                    ->query(fn (Builder $q) => $q->whereBetween('end_date', [today(), today()->addDays(30)])),
+                Filter::make('vraceno')->label('Vraćeno')
+                    ->query(fn (Builder $q) => $q->whereNotNull('return_date')),
+            ])
         ->headerActions([
             \Filament\Tables\Actions\CreateAction::make()->label('Dodaj OZO'),
         ])
         ->actions([
-            \Filament\Tables\Actions\EditAction::make(),
-            \Filament\Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                Action::make('extend3')->label('Produži +3 mj')
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
+                        // povećaj rok (mjeseci) da se end_date ponovno ispravno izračuna u modelu
+                        $record->duration_months = max(0, (int) $record->duration_months) + 3;
+                        $record->save();
+                    }),
+                
+                Action::make('returnedToday')->label('Označi vraćeno danas')
+                    ->requiresConfirmation()
+                    ->action(fn ($record) => $record->update(['return_date' => today()])),
+                DeleteAction::make(),
         ])
         ->bulkActions([
             \Filament\Tables\Actions\DeleteBulkAction::make(),
