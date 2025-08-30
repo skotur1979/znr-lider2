@@ -25,9 +25,13 @@ use Filament\Tables\Columns\BadgeColumn;
 use Carbon\Carbon;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Columns\ViewColumn;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
+use App\Traits\AutoAssignsUser; // ✅ isti trait kao u drugim modulima
 
 class PersonalProtectiveEquipmentLogResource extends Resource
 {
+    use AutoAssignsUser;
     protected static ?string $model = PersonalProtectiveEquipmentLog::class;
 
     protected static ?int $navigationSort = 5;
@@ -46,10 +50,36 @@ class PersonalProtectiveEquipmentLogResource extends Resource
         return 'Upisnik OZO';
     }
 
+    /** Admin vidi sve; ostali samo svoje */
+    public static function getEloquentQuery(): Builder
+    {
+        $q = parent::getEloquentQuery()
+            ->withoutGlobalScopes([SoftDeletingScope::class])
+            ->with('items');
+
+        if (Auth::user()?->isAdmin()) {
+            return $q;
+        }
+
+        // scope samo ako kolona postoji (da nav ne padne tijekom migracije)
+        if (Schema::hasColumn((new PersonalProtectiveEquipmentLog)->getTable(), 'user_id')) {
+            $q->where('user_id', Auth::id());
+        }
+
+        return $q;
+    }
+
+    /** Forma: trait ubacuje hidden user_id + ova polja */
     public static function form(Form $form): Form
     {
-        return $form
-            ->schema([
+        return static::assignUserField(
+            $form->schema(static::additionalFormFields())
+        );
+    }
+
+    public static function additionalFormFields(): array
+    {
+        return [
                 Section::make('Podaci o zaposleniku')
                     ->schema([
                         TextInput::make('user_last_name')
@@ -68,13 +98,7 @@ class PersonalProtectiveEquipmentLogResource extends Resource
                             ->maxLength(255),
                     ])->columns(2),
 
-       ]);
-}
-    public static function getEloquentQuery(): Builder
-{
-    return parent::getEloquentQuery()
-        ->withoutGlobalScopes([SoftDeletingScope::class])
-        ->with('items');
+       ];
 }
 
     public static function table(Table $table): Table
@@ -158,13 +182,28 @@ class PersonalProtectiveEquipmentLogResource extends Resource
         ];
     }
     public static function getRelations(): array
-{
-    return [
-        ItemsRelationManager::class,
-    ];
-}
+    {
+        return [
+            ItemsRelationManager::class,
+        ];
+    }
+
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::count();
+        try {
+            $q = static::getModel()::query();
+            if (! Auth::user()?->isAdmin()
+                && Schema::hasColumn((new PersonalProtectiveEquipmentLog)->getTable(), 'user_id')) {
+                $q->where('user_id', Auth::id());
+            }
+            return (string) $q->count();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    public static function getGlobalSearchEloquentQuery(): Builder
+    {
+        return static::getEloquentQuery();
     }
 }

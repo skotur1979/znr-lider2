@@ -11,7 +11,7 @@ class PersonalProtectiveEquipmentItem extends Model
     use HasFactory;
 
     protected $fillable = [
-        'log_id',
+        'personal_protective_equipment_log_id',  // ⬅️ umjesto 'log_id'
         'equipment_name',
         'size',
         'duration_months',
@@ -26,22 +26,23 @@ class PersonalProtectiveEquipmentItem extends Model
     ];
 
     public function log()
-{
-    return $this->belongsTo(PersonalProtectiveEquipmentLog::class, 'personal_protective_equipment_log_id');
-}
+    {
+        return $this->belongsTo(
+            PersonalProtectiveEquipmentLog::class,
+            'personal_protective_equipment_log_id'
+        );
+    }
 
-
-    // ✅ Accessor za prikaz izračunatog datuma isteka
     public function getCalculatedEndDateAttribute(): ?string
     {
         if ($this->issue_date && $this->duration_months) {
-            return $this->issue_date->copy()->addMonths($this->duration_months)->format('Y-m-d');
+            return $this->issue_date->copy()
+                ->addMonths($this->duration_months)
+                ->format('Y-m-d');
         }
-
         return null;
     }
 
-    // ✅ Mutator koji automatski postavlja end_date ako postoji issue_date + duration_months
     protected static function booted(): void
     {
         static::saving(function (self $item) {

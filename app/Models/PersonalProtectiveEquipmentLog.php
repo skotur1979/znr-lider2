@@ -11,18 +11,23 @@ class PersonalProtectiveEquipmentLog extends Model
     use HasFactory, SoftDeletes;
 
 protected $fillable = [
+        'user_id',           // ⬅️ novo
         'user_last_name',
         'user_oib',
         'workplace',
         'organization_unit',
     ];
 
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function items()
-{
-    return $this->hasMany(PersonalProtectiveEquipmentItem::class, 'personal_protective_equipment_log_id');
-}
-    protected function getRedirectUrl(): string
-{
-    return $this->getResource()::getUrl('edit', ['record' => $this->record]);
-}
+    {
+        return $this->hasMany(
+            PersonalProtectiveEquipmentItem::class,
+            'personal_protective_equipment_log_id'
+        );
+    }
 }
