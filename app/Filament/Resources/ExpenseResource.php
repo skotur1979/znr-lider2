@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ExpenseResource\Pages;
-use App\Models\Expense;
 use Filament\Forms;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
@@ -13,13 +12,17 @@ use Filament\Resources\Form;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
 use Filament\Tables;
+use App\Models\{Expense, Budget};
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BooleanColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
+use App\Traits\AutoAssignsUser; // ako koristiš trait kao u ostalim modulima
 
 class ExpenseResource extends Resource
 {
+    use AutoAssignsUser;
     protected static ?string $model = Expense::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-calculator';
@@ -27,119 +30,94 @@ class ExpenseResource extends Resource
     protected static ?string $navigationLabel = 'Troškovi';
     protected static ?int $navigationSort = 9;
 
-    public static function getFormSchema(): array
+    public static function form(Form $form): Form
+    {
+        // trait ubacuje hidden user_id + polja iz additionalFormFields()
+        return static::assignUserField($form);
+    }
+
+    public static function additionalFormFields(): array
     {
         return [
-            Section::make('Unos troška')
-                ->schema([
-                    Select::make('budget_id')
-                        ->label('Godina')
-                        ->required()
-                        ->searchable()
-                        ->options(fn () => \App\Models\Budget::orderByDesc('godina')->pluck('godina', 'id')),
+            Section::make('Unos troška')->schema([
+                Select::make('budget_id')
+                    ->label('Godina')
+                    ->required()
+                    ->searchable()
+                    ->options(function () {
+                        $qb = Budget::query()->orderByDesc('godina');
+                        if (! Auth::user()?->isAdmin()) {
+                            $qb->where('user_id', Auth::id());
+                        }
+                        return $qb->pluck('godina', 'id');
+                    }),
 
-                    TextInput::make('naziv_troska')
-                        ->label('Naziv troška')
-                        ->required(),
+                TextInput::make('naziv_troska')->label('Naziv troška')->required(),
+                TextInput::make('iznos')->label('Ukupan trošak (€)')->numeric()->required(),
+                TextInput::make('dobavljac')->label('Dobavljač'),
 
-                    TextInput::make('iznos')
-                        ->label('Ukupan trošak (€)')
-                        ->numeric()
-                        ->required(),
+                Select::make('mjesec')->label('Mjesec')->options([
+                    'Siječanj'=>'Siječanj','Veljača'=>'Veljača','Ožujak'=>'Ožujak','Travanj'=>'Travanj',
+                    'Svibanj'=>'Svibanj','Lipanj'=>'Lipanj','Srpanj'=>'Srpanj','Kolovoz'=>'Kolovoz',
+                    'Rujan'=>'Rujan','Listopad'=>'Listopad','Studeni'=>'Studeni','Prosinac'=>'Prosinac',
+                ])->required(),
 
-                    TextInput::make('dobavljac')
-                        ->label('Dobavljač'),
-
-                    Select::make('mjesec')
-                        ->label('Mjesec')
-                        ->options([
-                            'Siječanj' => 'Siječanj',
-                            'Veljača' => 'Veljača',
-                            'Ožujak' => 'Ožujak',
-                            'Travanj' => 'Travanj',
-                            'Svibanj' => 'Svibanj',
-                            'Lipanj' => 'Lipanj',
-                            'Srpanj' => 'Srpanj',
-                            'Kolovoz' => 'Kolovoz',
-                            'Rujan' => 'Rujan',
-                            'Listopad' => 'Listopad',
-                            'Studeni' => 'Studeni',
-                            'Prosinac' => 'Prosinac',
-                        ])
-                        ->required(),
-
-                    Toggle::make('realizirano')
-                        ->label('Realizirano'),
-                ]),
+                Toggle::make('realizirano')->label('Realizirano'),
+            ]),
         ];
     }
 
-    public static function form(Form $form): Form
+    /** Admin sve; ostali samo svoje */
+    public static function getEloquentQuery(): Builder
     {
-        return $form->schema(self::getFormSchema());
+        $q = parent::getEloquentQuery();
+        if (! Auth::user()?->isAdmin()) {
+            $q->where('user_id', Auth::id());
+        }
+        return $q;
     }
 
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                TextColumn::make('budget.godina')
-                    ->label('Godina')
-                    ->sortable()
-                    ->searchable(),
-
-                TextColumn::make('mjesec')
-                    ->label('Mjesec')
-                    ->sortable(),
-
-                TextColumn::make('naziv_troska')
-                    ->label('Naziv troška')
-                    ->searchable(),
-
+                TextColumn::make('budget.godina')->label('Godina')->sortable()->searchable(),
+                TextColumn::make('mjesec')->label('Mjesec')->sortable(),
+                TextColumn::make('naziv_troska')->label('Naziv troška')->searchable(),
                 TextColumn::make('iznos')
-                    ->label('Iznos (€)')
-                    ->formatStateUsing(fn ($state) => number_format($state, 2, ',', '.') . ' €')
-                    ->sortable(),
-
-                TextColumn::make('dobavljac')
-                    ->label('Dobavljač')
-                    ->searchable(),
-
-                BooleanColumn::make('realizirano')
-                    ->label('Realizirano')
-                    ->trueIcon('heroicon-o-check-circle')
-                    ->falseIcon('heroicon-o-x-circle'),
+                ->label('Iznos (€)')
+                ->formatStateUsing(function ($state) {
+                $n = is_numeric($state) ? (float) $state : 0;
+                return number_format($n, 2, ',', '.') . ' €';
+                })
+                ->sortable(),
+                TextColumn::make('dobavljac')->label('Dobavljač')->searchable(),
+                BooleanColumn::make('realizirano')->label('Realizirano')
+                    ->trueIcon('heroicon-o-check-circle')->falseIcon('heroicon-o-x-circle'),
             ])
             ->defaultSort('mjesec')
             ->filters([
-                SelectFilter::make('mjesec')
-                    ->label('Mjesec')
-                    ->options([
-                        'Siječanj' => 'Siječanj',
-                        'Veljača' => 'Veljača',
-                        'Ožujak' => 'Ožujak',
-                        'Travanj' => 'Travanj',
-                        'Svibanj' => 'Svibanj',
-                        'Lipanj' => 'Lipanj',
-                        'Srpanj' => 'Srpanj',
-                        'Kolovoz' => 'Kolovoz',
-                        'Rujan' => 'Rujan',
-                        'Listopad' => 'Listopad',
-                        'Studeni' => 'Studeni',
-                        'Prosinac' => 'Prosinac',
-                    ]),
+                SelectFilter::make('mjesec')->label('Mjesec')->options([
+                    'Siječanj'=>'Siječanj','Veljača'=>'Veljača','Ožujak'=>'Ožujak','Travanj'=>'Travanj',
+                    'Svibanj'=>'Svibanj','Lipanj'=>'Lipanj','Srpanj'=>'Srpanj','Kolovoz'=>'Kolovoz',
+                    'Rujan'=>'Rujan','Listopad'=>'Listopad','Studeni'=>'Studeni','Prosinac'=>'Prosinac',
+                ]),
 
-                SelectFilter::make('godina')
-                    ->label('Godina')
-                    ->options(fn () => \App\Models\Budget::orderBy('godina')->pluck('godina', 'godina'))
-                    ->placeholder('Sve')
-                    ->default(null)
-                    ->query(function (Builder $query, array $data): Builder {
-                        if (!isset($data['value']) || $data['value'] === null) {
-                            return $query;
+                SelectFilter::make('godina')->label('Godina')
+                    ->options(function () {
+                        $qb = Budget::query()->orderBy('godina');
+                        if (! Auth::user()?->isAdmin()) {
+                            $qb->where('user_id', Auth::id());
                         }
-
-                        return $query->whereHas('budget', fn ($q) => $q->where('godina', $data['value']));
+                        return $qb->pluck('godina', 'godina');
+                    })
+                    ->placeholder('Sve')
+                    ->query(function (Builder $query, array $data): Builder {
+                        $value = $data['value'] ?? null;
+                        if ($value === null || $value === '') {
+                            return $query; // bez filtra
+                        }
+                        return $query->whereHas('budget', fn (Builder $b) => $b->where('godina', $value));
                     }),
             ])
             ->actions([
@@ -150,40 +128,19 @@ class ExpenseResource extends Resource
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make()
-    ->label('Novi trošak')
-    ->form(self::getFormSchema())
-    ->modalHeading('Novi trošak'),
-
-                Tables\Actions\Action::make('export_excel')
-                    ->label('Izvoz u Excel')
-                    ->icon('heroicon-o-document-text')
-                    ->color('success')
-                    ->button()
-                    ->action(fn () => \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\ExpensesExport, 'Troskovi.xlsx')),
+                    ->label('Novi trošak')
+                    ->form(static::additionalFormFields())    // isti layout u modalu
+                    ->mutateFormDataUsing(fn (array $data) => $data + ['user_id' => auth()->id()])
+                    ->modalHeading('Novi trošak'),
             ]);
-    }
-
-    public static function getRelations(): array
-    {
-        return [];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListExpenses::route('/'),
+            'index'  => Pages\ListExpenses::route('/'),
             'create' => Pages\CreateExpense::route('/create'),
-            'edit' => Pages\EditExpense::route('/{record}/edit'),
+            'edit'   => Pages\EditExpense::route('/{record}/edit'),
         ];
-    }
-
-    public static function getPluralLabel(): string
-    {
-        return 'Troškovi';
-    }
-
-    public static function getLabel(): string
-    {
-        return 'Trošak';
     }
 }

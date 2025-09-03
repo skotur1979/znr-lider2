@@ -10,6 +10,7 @@ class Expense extends Model
     use HasFactory;
 
     protected $fillable = [
+    'user_id',
     'budget_id',
     'naziv_troska',
     'iznos',
@@ -17,7 +18,13 @@ class Expense extends Model
     'mjesec',
     'realizirano',
 ];
-public function budget() {
-    return $this->belongsTo(Budget::class);
-}
+public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function budget()
+    {
+        return $this->belongsTo(Budget::class);
+    }
 }
