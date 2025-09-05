@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class TestAttemptResource extends Resource
 {
@@ -24,24 +25,19 @@ class TestAttemptResource extends Resource
     protected static ?string $pluralModelLabel = 'Rješeni testovi';
     protected static ?string $modelLabel = 'Rješeni test';
 
-    public static function canCreate(): bool
-    {
-        return false;
-    }
+    public static function canCreate(): bool { return false; }
+    public static function canEdit(Model $record): bool { return false; }
+    public static function canDelete(Model $record): bool { return false; }
 
-    public static function canEdit(Model $record): bool
-    {
-        return false;
-    }
+    public static function form(Form $form): Form { return $form->schema([]); }
 
-    public static function canDelete(Model $record): bool
+    public static function getEloquentQuery(): Builder
     {
-        return false;
-    }
-
-    public static function form(Form $form): Form
-    {
-        return $form->schema([]);
+        $q = parent::getEloquentQuery();
+        if (! Auth::user()?->isAdmin()) {
+            $q->where('user_id', Auth::id());
+        }
+        return $q->with(['user','test']);
     }
 
     public static function table(Table $table): Table
@@ -83,14 +79,13 @@ class TestAttemptResource extends Resource
             'index' => Pages\ListTestAttempts::route('/'),
         ];
     }
-    public static function shouldRegisterNavigation(): bool
+    public static function getNavigationBadge(): ?string
 {
-    return auth()->check() && auth()->user()->is_admin;
-}
-
-public static function canAccess(): bool
-{
-    return auth()->user()?->role === 'admin';
+    $q = static::getModel()::query();
+    if (! auth()->user()?->isAdmin()) {
+        $q->where('user_id', auth()->id());
+    }
+    return (string) $q->count();
 }
 
 }

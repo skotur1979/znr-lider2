@@ -94,4 +94,12 @@ class BudgetResource extends Resource
             'edit'   => Pages\EditBudget::route('/{record}/edit'),
         ];
     }
+    public static function getNavigationBadge(): ?string
+{
+    $q = static::getModel()::query();
+    if (! auth()->user()?->isAdmin()) {
+        $q->where('user_id', auth()->id());
+    }
+    return (string) $q->count();
+}
 }

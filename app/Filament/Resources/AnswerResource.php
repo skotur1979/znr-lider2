@@ -19,9 +19,12 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Repeater;
+use Illuminate\Support\Facades\Auth;
+use App\Traits\AutoAssignsUser;
 
 class AnswerResource extends Resource
 {
+    use AutoAssignsUser;
     protected static ?string $model = Answer::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-collection';
@@ -32,9 +35,13 @@ class AnswerResource extends Resource
     protected static ?int $navigationSort = 32;
 
     public static function form(Form $form): Form
-{
-    return $form
-        ->schema([
+    {
+        return static::assignUserField($form);
+    }
+
+    public static function additionalFormFields(): array
+    {
+        return [
             Select::make('question_id')
                 ->label('Pitanje')
                 ->relationship('question', 'tekst')
@@ -46,7 +53,7 @@ class AnswerResource extends Resource
 
             Toggle::make('is_correct')
                 ->label('Točan odgovor'),
-        ]);
+        ];
     }
 
     public static function table(Table $table): Table
@@ -84,4 +91,20 @@ class AnswerResource extends Resource
             'edit' => Pages\EditAnswer::route('/{record}/edit'),
         ];
     }    
+    public static function getEloquentQuery(): Builder
+    {
+        $q = parent::getEloquentQuery();
+        if (! Auth::user()?->isAdmin()) {
+            $q->where('user_id', Auth::id());
+        }
+        return $q;
+    }
+    public static function getNavigationBadge(): ?string
+{
+    $q = static::getModel()::query();
+    if (! auth()->user()?->isAdmin()) {
+        $q->where('user_id', auth()->id());
+    }
+    return (string) $q->count();
+}
 }

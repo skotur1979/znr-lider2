@@ -9,20 +9,9 @@ class Question extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'test_id',
-        'tekst',
-        'visestruki_odgovori',
-        'slika_path',
-    ];
+    protected $fillable = ['user_id','test_id','tekst','visestruki_odgovori','slika_path'];
 
-    public function test()
-    {
-        return $this->belongsTo(Test::class);
-    }
-
-    public function answers()
-    {
-        return $this->hasMany(Answer::class);
-    }
+    public function user()   { return $this->belongsTo(User::class); }
+    public function test()   { return $this->belongsTo(Test::class); }
+    public function answers(){ return $this->hasMany(Answer::class); }
 }

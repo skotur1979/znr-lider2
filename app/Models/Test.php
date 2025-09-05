@@ -9,24 +9,9 @@ class Test extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'naziv',
-        'sifra',
-        'opis',
-        'minimalni_prolaz',
-    ];
+    protected $fillable = ['user_id','naziv','sifra','opis','minimalni_prolaz'];
 
-    public function questions()
-    {
-        return $this->hasMany(Question::class);
-    }
-
-    public function attempts()
-    {
-        return $this->hasMany(TestAttempt::class);
-    }
-    public function test()
-{
-    return $this->belongsTo(Test::class);
-}
+    public function user()     { return $this->belongsTo(User::class); }
+    public function questions(){ return $this->hasMany(Question::class); }
+    public function attempts() { return $this->hasMany(TestAttempt::class); }
 }

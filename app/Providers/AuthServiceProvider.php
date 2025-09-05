@@ -37,7 +37,11 @@ class AuthServiceProvider extends ServiceProvider
         MedicalRefferal::class => OwnedPolicy::class,
         Expense::class         => OwnedPolicy::class,
         Budget::class          => OwnedPolicy::class,
-        
+        Test::class           => OwnedPolicy::class,
+        Question::class       => OwnedPolicy::class,
+        Answer::class         => OwnedPolicy::class,
+        TestAttempt::class    => OwnedPolicy::class,
+        AttemptAnswer::class  => OwnedPolicy::class,
 
         // Ako kasnije želiš dodati još “po korisniku” modele:
         // \App\Models\Chemical::class         => OwnedPolicy::class,

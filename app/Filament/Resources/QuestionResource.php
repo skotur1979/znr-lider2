@@ -21,9 +21,12 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Repeater;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Forms\Components\FileUpload;
+use Illuminate\Support\Facades\Auth;
+use App\Traits\AutoAssignsUser;
 
 class QuestionResource extends Resource
 {
+    use AutoAssignsUser;
     protected static ?string $model = Question::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-collection';
@@ -34,13 +37,21 @@ class QuestionResource extends Resource
     protected static ?int $navigationSort = 31;
 
     public static function form(Form $form): Form
-{
-    return $form
-        ->schema([
+    {
+        return static::assignUserField($form);
+    }
+
+    public static function additionalFormFields(): array
+    {
+        return [
             Select::make('test_id')
-    ->label('Test')
-    ->relationship('test', 'naziv') // prilagodi "naziv" stvarnom nazivu polja u Test modelu
-    ->required(),
+                ->label('Test')
+                ->relationship('test', 'naziv', modifyQueryUsing: function (Builder $q) {
+                    if (! Auth::user()?->isAdmin()) {
+                        $q->where('user_id', Auth::id());
+                    }
+                })
+                ->required(),
             TextInput::make('tekst')
                 ->label('Tekst pitanja')
                 ->required(),
@@ -68,7 +79,7 @@ class QuestionResource extends Resource
                 ])
                 ->columns(2)
                 ->createItemButtonLabel('Dodaj odgovor'),
-        ]);
+        ];
     }
 
     public static function table(Table $table): Table
@@ -103,4 +114,20 @@ class QuestionResource extends Resource
             'edit' => Pages\EditQuestion::route('/{record}/edit'),
         ];
     }
+    public static function getEloquentQuery(): Builder
+    {
+        $q = parent::getEloquentQuery();
+        if (! Auth::user()?->isAdmin()) {
+            $q->where('user_id', Auth::id());
+        }
+        return $q;
+    }
+    public static function getNavigationBadge(): ?string
+{
+    $q = static::getModel()::query();
+    if (! auth()->user()?->isAdmin()) {
+        $q->where('user_id', auth()->id());
+    }
+    return (string) $q->count();
+}
 }
