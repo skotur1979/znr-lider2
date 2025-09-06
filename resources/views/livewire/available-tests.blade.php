@@ -1,5 +1,5 @@
 <div class="max-w-2xl mx-auto mt-6 space-y-4">
-    <h1 class="text-xl font-bold">Izaberite test</h1>
+    <h1 class="text-xl font-bold">Odaberite test</h1>
 
     @forelse($tests as $test)
         <div class="border p-4 rounded shadow">
