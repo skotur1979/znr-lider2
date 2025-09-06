@@ -34,16 +34,12 @@ class PersonalProtectiveEquipmentLogResource extends Resource
     use AutoAssignsUser;
     protected static ?string $model = PersonalProtectiveEquipmentLog::class;
 
-    protected static ?int $navigationSort = 5;
+    protected static ?string $navigationGroup = 'Zaposlenici';
+    protected static ?int $navigationSort = 3; // redoslijed unutar grupe
 
     protected static ?string $label = 'OZO';
     protected static ?string $navigationIcon = 'heroicon-o-shield-check';
     protected static ?string $pluralLabel = 'Osobna zaštitna oprema';
-
-    public static function getNavigationGroup(): ?string
-    {
-        return 'Moduli';
-    }
 
     public static function getNavigationLabel(): string
     {

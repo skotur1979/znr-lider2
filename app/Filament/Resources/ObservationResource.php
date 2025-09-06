@@ -22,9 +22,9 @@ class ObservationResource extends Resource
     use AutoAssignsUser;
     protected static ?string $model = Observation::class;
     protected static ?string $navigationIcon = 'heroicon-o-exclamation-circle';
-    protected static ?string $navigationGroup = 'Moduli';
+    protected static ?string $navigationGroup = 'Upravljanje';
     protected static ?string $navigationLabel = 'Zapažanja';
-    protected static ?int $navigationSort = 7;
+    protected static ?int $navigationSort = 4;
     protected static ?string $label = 'Zapažanje';
     protected static ?string $pluralLabel = 'Zapažanja';
 

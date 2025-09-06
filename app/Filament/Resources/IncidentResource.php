@@ -27,10 +27,10 @@ class IncidentResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-eye';
 
-    protected static ?string $navigationGroup = 'Moduli';
+    protected static ?string $navigationGroup = 'Upravljanje';
     protected static ?string $navigationLabel = 'Incidenti';
     protected static ?string $label = 'Incidenti';
-    protected static ?int $navigationSort = 8;
+    protected static ?int $navigationSort = 5;
     protected static ?string $pluralLabel = 'Incidenti';
 
     /** Forma – user_id automatski */

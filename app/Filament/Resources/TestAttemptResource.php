@@ -24,6 +24,7 @@ class TestAttemptResource extends Resource
     protected static ?string $navigationLabel = 'Rješeni testovi';
     protected static ?string $pluralModelLabel = 'Rješeni testovi';
     protected static ?string $modelLabel = 'Rješeni test';
+    protected static ?int $navigationSort = 2;
 
     public static function canCreate(): bool { return false; }
     public static function canEdit(Model $record): bool { return false; }
@@ -53,8 +54,9 @@ class TestAttemptResource extends Resource
                 TextColumn::make('rezultat')->label('Rezultat (%)')->suffix('%'),
                 BadgeColumn::make('prolaz')
                     ->label('Prolaz')
-                    ->enum([true => 'Da', false => 'Ne'])
-                    ->colors([true => 'success', false => 'danger']),
+                    ->enum([ true => 'Da', false => 'Ne' ])   // tekst
+                ->color(fn ($state) => $state ? 'success' : 'danger'),
+    
                 TextColumn::make('created_at')->dateTime('d.m.Y H:i')->label('Datum slanja'),
             ])
             ->defaultSort('created_at', 'desc')

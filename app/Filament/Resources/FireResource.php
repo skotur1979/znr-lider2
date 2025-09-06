@@ -37,9 +37,9 @@ class FireResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Vatrogasni aparati';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 2;
 
-    protected static ?string $navigationGroup = 'Moduli';
+    protected static ?string $navigationGroup = 'Ispitivanja';
 
     public static function form(Form $form): Form
 {

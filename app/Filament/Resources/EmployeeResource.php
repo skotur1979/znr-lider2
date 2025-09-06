@@ -41,10 +41,8 @@ class EmployeeResource extends Resource
     protected static ?string $modelLabel = 'Zaposlenik';
 
     protected static ?string $pluralModelLabel = 'Zaposlenici';
-
-    protected static ?int $navigationSort = 2;
-
-    protected static ?string $navigationGroup = 'Moduli';
+    protected static ?string $navigationGroup = 'Zaposlenici';
+    protected static ?int $navigationSort = 1; // redoslijed unutar grupe
 
     public static function form(Form $form): Form
 {

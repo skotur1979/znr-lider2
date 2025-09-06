@@ -27,7 +27,7 @@ class BudgetResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-credit-card';
     protected static ?string $pluralModelLabel = 'Budžet';
 
-    protected static ?int $navigationSort = 99;
+    protected static ?int $navigationSort = 7;
 
     protected static ?string $navigationGroup = 'Upravljanje';
 

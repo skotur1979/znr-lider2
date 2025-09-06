@@ -33,7 +33,8 @@ class DocumentationItemResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-collection';
     protected static ?string $navigationLabel = 'Dokumentacija';
     protected static ?string $pluralModelLabel = 'Dokumentacija';
-    protected static ?int $navigationSort = 11;
+    protected static ?string $navigationGroup = 'Upravljanje';
+    protected static ?int $navigationSort = 2;
 
     // Admin vidi sve, ostali samo svoje
     public static function getEloquentQuery(): Builder

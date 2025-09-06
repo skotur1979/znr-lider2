@@ -28,7 +28,7 @@ class AnswerResource extends Resource
     protected static ?string $model = Answer::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-collection';
-    protected static ?string $navigationGroup = 'Upravljanje';
+    protected static ?string $navigationGroup = 'Testiranje';
     protected static ?string $navigationLabel = 'Odgovori';
     protected static ?string $pluralModelLabel = 'Odgovori';
     protected static ?string $modelLabel = 'Odgovor';

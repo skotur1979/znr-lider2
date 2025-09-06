@@ -32,10 +32,10 @@ class FirstAidKitResource extends Resource
     protected static ?string $model = FirstAidKit::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-plus-circle';
-    protected static ?string $navigationGroup = 'Moduli';
+    protected static ?string $navigationGroup = 'Ispitivanja';
     protected static ?string $pluralModelLabel = 'Prva pomoć';
     protected static ?string $navigationLabel = 'Prva pomoć - ormarići';
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 3;
 
     public static function form(Form $form): Form
 {

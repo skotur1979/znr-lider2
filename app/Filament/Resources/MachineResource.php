@@ -41,9 +41,9 @@ class MachineResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Radna Oprema';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 1;
 
-    protected static ?string $navigationGroup = 'Moduli';
+    protected static ?string $navigationGroup = 'Ispitivanja';
 
     public static function form(Form $form): Form
 {

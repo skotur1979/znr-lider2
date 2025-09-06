@@ -31,9 +31,9 @@ class ChemicalResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-beaker';
     protected static ?string $navigationLabel = 'Kemikalije';
     protected static ?string $pluralModelLabel = 'Kemikalije';
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 3;
 
-    protected static ?string $navigationGroup = 'Moduli';
+    protected static ?string $navigationGroup = 'Upravljanje';
 
     public static function form(Form $form): Form
     {

@@ -30,7 +30,7 @@ class QuestionResource extends Resource
     protected static ?string $model = Question::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-collection';
-    protected static ?string $navigationGroup = 'Upravljanje';
+    protected static ?string $navigationGroup = 'Testiranje';
     protected static ?string $navigationLabel = 'Pitanja';
     protected static ?string $pluralModelLabel = 'Pitanja';
     protected static ?string $modelLabel = 'Pitanje';

@@ -24,9 +24,9 @@ class RiskAssessmentResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-clipboard';
     protected static ?string $pluralModelLabel = 'Procjene rizika';
     protected static ?string $navigationLabel = 'Procjene rizika';
-    protected static ?string $navigationGroup = 'Moduli';
+    protected static ?string $navigationGroup = 'Upravljanje';
     protected static ?string $modelLabel = 'Procjene rizika';
-
+    protected static ?int $navigationSort = 1;
 
     public static function getEloquentQuery(): Builder
     {

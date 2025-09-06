@@ -9,10 +9,10 @@ class AvailableTestsPage extends Page
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-check';
     protected static ?string $navigationLabel = 'Riješi testove';
     protected static ?string $navigationGroup = 'Testiranje';
-    protected static ?int $navigationSort = 99;
+    protected static ?int $navigationSort = 1;
 
     protected static string $view = 'filament.pages.available-tests-page';
-
+    
     public static function shouldRegisterNavigation(): bool
     {
         return auth()->check() && in_array(auth()->user()?->role, ['admin', 'korisnik']);
@@ -22,4 +22,8 @@ class AvailableTestsPage extends Page
     {
         abort_unless(auth()->check() && in_array(auth()->user()->role, ['admin', 'korisnik']), 403);
     }
+    public function getTitle(): string
+{
+    return 'Dostupni testovi';
+}
 }

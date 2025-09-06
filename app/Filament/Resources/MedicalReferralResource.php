@@ -27,6 +27,7 @@ class MedicalReferralResource extends Resource
     protected static ?string $navigationLabel  = 'RA-1 Uputnice';
     protected static ?string $pluralModelLabel = 'RA-1 Uputnice';
     protected static ?string $modelLabel       = 'RA-1 Uputnica';
+    protected static ?int $navigationSort = 2; // redoslijed unutar grupe
 
     private static function isAdminUser($user): bool
 {

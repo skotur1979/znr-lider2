@@ -21,8 +21,8 @@ class CategoryResource extends Resource
     protected static ?string $navigationLabel = 'Kategorije Ispitivanja';
     protected static ?string $modelLabel      = 'Kategorija';
     protected static ?string $pluralModelLabel = 'Kategorije Ispitivanja';
-    protected static ?int    $navigationSort  = 4;
-    protected static ?string $navigationGroup = 'Upravljanje';
+    protected static ?int    $navigationSort  = 5;
+    protected static ?string $navigationGroup = 'Ispitivanja';
 
     public static function form(Form $form): Form
     {

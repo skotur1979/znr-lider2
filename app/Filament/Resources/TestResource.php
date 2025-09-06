@@ -27,7 +27,7 @@ class TestResource extends Resource
     protected static ?string $model = Test::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-collection';
-    protected static ?string $navigationGroup = 'Upravljanje';
+    protected static ?string $navigationGroup = 'Testiranje';
     protected static ?string $navigationLabel = 'Testovi';
     protected static ?string $pluralModelLabel = 'Testovi';
     protected static ?string $modelLabel = 'Test';

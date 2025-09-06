@@ -19,6 +19,9 @@ class TestAttempt extends Model
         'rezultat',
         'prolaz',
     ];
+protected $casts = [
+    'prolaz' => 'boolean',
+];
 
     public function test()
     {
