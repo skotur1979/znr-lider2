@@ -4,36 +4,77 @@ namespace App\Filament\Resources\EmployeeResource\Widgets;
 
 use App\Models\Employee;
 use App\Models\Machine;
-use App\Models\Fire;
 use App\Models\Miscellaneous;
+use App\Models\Fire;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Card;
 use Illuminate\Support\Carbon;
+
 use App\Filament\Resources\EmployeeResource;
 use App\Filament\Resources\MachineResource;
 use App\Filament\Resources\MiscellaneousResource;
+use App\Filament\Resources\FireResource;
 
 class EmployeesStatsOverview extends BaseWidget
 {
     protected function getCards(): array
     {
-        // 1. Zaposlenici - liječnički
+        $today   = Carbon::today();
+        $inMonth = Carbon::today()->addMonth();
+
+        // Helper: uzmi isti upit kao na indexu resursa
+        $qEmployees = method_exists(EmployeeResource::class, 'getEloquentQuery')
+            ? EmployeeResource::getEloquentQuery()
+            : Employee::query();
+
+        $qMachines = method_exists(MachineResource::class, 'getEloquentQuery')
+            ? MachineResource::getEloquentQuery()
+            : Machine::query();
+
+        $qMisc = method_exists(MiscellaneousResource::class, 'getEloquentQuery')
+            ? MiscellaneousResource::getEloquentQuery()
+            : Miscellaneous::query();
+
+        $qFire = class_exists(FireResource::class) && method_exists(FireResource::class, 'getEloquentQuery')
+            ? FireResource::getEloquentQuery()
+            : Fire::query();
+
+        // 👇 helper koji svim builderima doda "active = 1" i makne trashed, ako postoji
+        $purify = function ($q) {
+            // isključi deaktivirane (ako kolona postoji; u većini tvojih modula je 'active')
+            $q->when($this->columnExists($q, 'active'), fn ($qq) => $qq->where('active', true));
+
+            // isključi soft-deleted (ako model koristi SoftDeletes)
+            if ($this->usesSoftDeletes($q)) {
+                $q->withoutTrashed();
+            }
+            return $q;
+        };
+
+        $qEmployees = $purify($qEmployees);
+        $qMachines  = $purify($qMachines);
+        $qMisc      = $purify($qMisc);
+        $qFire      = $purify($qFire);
+
+        /* ---------------- ZAPOSLENICI – liječnički ---------------- */
+        $empTotal   = (clone $qEmployees)->count();
+        $empSoon    = (clone $qEmployees)->whereBetween('medical_examination_valid_until', [$today, $inMonth])->count();
+        $empExpired = (clone $qEmployees)->whereDate('medical_examination_valid_until', '<', $today)->count();
+
         $column1 = [
-            Card::make('Zaposlenici', Employee::count())
+            Card::make('Zaposlenici', $empTotal)
                 ->description('Ukupan broj')
                 ->descriptionIcon('heroicon-o-users')
                 ->color('success'),
 
-            Card::make('Zaposlenici', Employee::whereBetween('medical_examination_valid_until', [
-                Carbon::today(), Carbon::today()->addMonth()
-            ])->count())
+            Card::make('Zaposlenici', $empSoon)
                 ->description('Liječnički uskoro ističe')
                 ->descriptionIcon('heroicon-o-users')
                 ->color('warning')
                 ->url(EmployeeResource::getUrl('index', ['pregled' => 'uskoro']))
                 ->extraAttributes(['style' => 'cursor: pointer']),
 
-            Card::make('Zaposlenici', Employee::where('medical_examination_valid_until', '<', Carbon::today())->count())
+            Card::make('Zaposlenici', $empExpired)
                 ->description('Liječnički istekao')
                 ->descriptionIcon('heroicon-o-users')
                 ->color('danger')
@@ -41,33 +82,33 @@ class EmployeesStatsOverview extends BaseWidget
                 ->extraAttributes(['style' => 'cursor: pointer']),
         ];
 
-        // 2. Zaposlenici - ostali rokovi
+        /* ---------------- ZAPOSLENICI – ostali rokovi ---------------- */
+        $empOtherTotal   = (clone $qEmployees)->count();
+        $empOtherSoon    = (clone $qEmployees)->where(function ($q) use ($today, $inMonth) {
+                                $q->whereBetween('toxicology_valid_until', [$today, $inMonth])
+                                  ->orWhereBetween('employers_authorization_valid_until', [$today, $inMonth])
+                                  ->orWhereHas('certificates', fn($qq) => $qq->whereBetween('valid_until', [$today, $inMonth]));
+                            })->count();
+        $empOtherExpired = (clone $qEmployees)->where(function ($q) use ($today) {
+                                $q->whereDate('toxicology_valid_until', '<', $today)
+                                  ->orWhereDate('employers_authorization_valid_until', '<', $today)
+                                  ->orWhereHas('certificates', fn($qq) => $qq->whereDate('valid_until', '<', $today));
+                            })->count();
+
         $column2 = [
-            Card::make('Zaposlenici', Employee::count())
+            Card::make('Zaposlenici', $empOtherTotal)
                 ->description('Ukupan broj')
                 ->descriptionIcon('heroicon-o-users')
                 ->color('success'),
 
-            Card::make('Zaposlenici', Employee::where(function ($q) {
-                $q->whereBetween('toxicology_valid_until', [Carbon::today(), Carbon::today()->addMonth()])
-                  ->orWhereBetween('employers_authorization_valid_until', [Carbon::today(), Carbon::today()->addMonth()])
-                  ->orWhereHas('certificates', function ($q2) {
-                      $q2->whereBetween('valid_until', [Carbon::today(), Carbon::today()->addMonth()]);
-                  });
-            })->count())
+            Card::make('Zaposlenici', $empOtherSoon)
                 ->description('Ostali rokovi uskoro')
                 ->descriptionIcon('heroicon-o-users')
                 ->color('warning')
                 ->url(EmployeeResource::getUrl('index', ['pregled' => 'ostalo-uskoro']))
                 ->extraAttributes(['style' => 'cursor: pointer']),
 
-            Card::make('Zaposlenici', Employee::where(function ($q) {
-                $q->where('toxicology_valid_until', '<', Carbon::today())
-                  ->orWhere('employers_authorization_valid_until', '<', Carbon::today())
-                  ->orWhereHas('certificates', function ($q2) {
-                      $q2->where('valid_until', '<', Carbon::today());
-                  });
-            })->count())
+            Card::make('Zaposlenici', $empOtherExpired)
                 ->description('Ostali rokovi istekli')
                 ->descriptionIcon('heroicon-o-users')
                 ->color('danger')
@@ -75,23 +116,25 @@ class EmployeesStatsOverview extends BaseWidget
                 ->extraAttributes(['style' => 'cursor: pointer']),
         ];
 
-        // 3. Strojevi
+        /* ---------------- STROJEVI ---------------- */
+        $machTotal   = (clone $qMachines)->count();
+        $machSoon    = (clone $qMachines)->whereBetween('examination_valid_until', [$today, $inMonth])->count();
+        $machExpired = (clone $qMachines)->whereDate('examination_valid_until', '<', $today)->count();
+
         $column3 = [
-            Card::make('Strojevi', Machine::count())
+            Card::make('Strojevi', $machTotal)
                 ->description('Ukupan broj')
                 ->descriptionIcon('heroicon-o-cog')
                 ->color('success'),
 
-            Card::make('Strojevi', Machine::whereBetween('examination_valid_until', [
-                Carbon::today(), Carbon::today()->addMonth()
-            ])->count())
+            Card::make('Strojevi', $machSoon)
                 ->description('Ispitivanje uskoro ističe')
                 ->descriptionIcon('heroicon-o-cog')
                 ->color('warning')
                 ->url(MachineResource::getUrl('index', ['pregled' => 'uskoro']))
                 ->extraAttributes(['style' => 'cursor: pointer']),
 
-            Card::make('Strojevi', Machine::where('examination_valid_until', '<', Carbon::today())->count())
+            Card::make('Strojevi', $machExpired)
                 ->description('Ispitivanje isteklo')
                 ->descriptionIcon('heroicon-o-cog')
                 ->color('danger')
@@ -99,32 +142,29 @@ class EmployeesStatsOverview extends BaseWidget
                 ->extraAttributes(['style' => 'cursor: pointer']),
         ];
 
-        // 4. Ostalo (spojeni vatrogasni + ostalo)
-        $combinedCount = Miscellaneous::count() + Fire::count();
-        $combinedExpiring = Miscellaneous::whereBetween('examination_valid_until', [
-                Carbon::today(), Carbon::today()->addMonth()
-            ])->count()
-            + Fire::whereBetween('examination_valid_until', [
-                Carbon::today(), Carbon::today()->addMonth()
-            ])->count();
+        /* ---------------- OSTALA ISPITIVANJA + VATROGASNI ---------------- */
+        $miscTotal   = (clone $qMisc)->count();
+        $miscSoon    = (clone $qMisc)->whereBetween('examination_valid_until', [$today, $inMonth])->count();
+        $miscExpired = (clone $qMisc)->whereDate('examination_valid_until', '<', $today)->count();
 
-        $combinedExpired = Miscellaneous::where('examination_valid_until', '<', Carbon::today())->count()
-            + Fire::where('examination_valid_until', '<', Carbon::today())->count();
+        $fireTotal   = (clone $qFire)->count();
+        $fireSoon    = (clone $qFire)->whereBetween('examination_valid_until', [$today, $inMonth])->count();
+        $fireExpired = (clone $qFire)->whereDate('examination_valid_until', '<', $today)->count();
 
         $column4 = [
-            Card::make('Ostala ispitivanja & Vatrogasni aparati', $combinedCount)
+            Card::make('Ostala ispitivanja & Vatrogasni aparati', $miscTotal + $fireTotal)
                 ->description('Ukupan broj')
                 ->descriptionIcon('heroicon-o-light-bulb')
                 ->color('success'),
 
-            Card::make('Ostala ispitivanja & Vatrogasni aparati', $combinedExpiring)
+            Card::make('Ostala ispitivanja & Vatrogasni aparati', $miscSoon + $fireSoon)
                 ->description('Uskoro ističe')
                 ->descriptionIcon('heroicon-o-light-bulb')
                 ->color('warning')
                 ->url(MiscellaneousResource::getUrl('index', ['pregled' => 'uskoro']))
                 ->extraAttributes(['style' => 'cursor: pointer']),
 
-            Card::make('Ostala ispitivanja & Vatrogasni aparati', $combinedExpired)
+            Card::make('Ostala ispitivanja & Vatrogasni aparati', $miscExpired + $fireExpired)
                 ->description('Isteklo')
                 ->descriptionIcon('heroicon-o-light-bulb')
                 ->color('danger')
@@ -132,7 +172,7 @@ class EmployeesStatsOverview extends BaseWidget
                 ->extraAttributes(['style' => 'cursor: pointer']),
         ];
 
-        // Vertikalno poravnanje (3 reda × 4 stupca)
+        // 3 reda × 4 stupca
         $cards = [];
         for ($i = 0; $i < 3; $i++) {
             $cards[] = $column1[$i];
@@ -144,8 +184,20 @@ class EmployeesStatsOverview extends BaseWidget
         return $cards;
     }
 
-    protected function getColumns(): int
+    /* ===== Helpers ===== */
+
+    private function usesSoftDeletes($q): bool
     {
-        return 4; // Četiri okomita stupca
+        return in_array(\Illuminate\Database\Eloquent\SoftDeletes::class, class_uses_recursive($q->getModel()));
+    }
+
+    private function columnExists($q, string $column): bool
+    {
+        // brza provjera preko liste fillable/casts/attributes; dovoljno za "active"
+        $model = $q->getModel();
+        return in_array($column, $model->getFillable(), true)
+            || array_key_exists($column, $model->getCasts())
+            || array_key_exists($column, $model->getAttributes())
+            || \Schema::hasColumn($model->getTable(), $column);
     }
 }
