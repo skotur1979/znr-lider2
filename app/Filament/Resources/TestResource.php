@@ -31,7 +31,7 @@ class TestResource extends Resource
     protected static ?string $navigationLabel = 'Testovi';
     protected static ?string $pluralModelLabel = 'Testovi';
     protected static ?string $modelLabel = 'Test';
-    protected static ?int $navigationSort = 30; // da bude ispod Budžeta
+    protected static ?int $navigationSort = 97; // da bude ispod Budžeta
 
     /** Forma kroz trait (hidden user_id + polja ispod) */
     public static function form(Form $form): Form

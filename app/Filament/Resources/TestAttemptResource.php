@@ -24,7 +24,7 @@ class TestAttemptResource extends Resource
     protected static ?string $navigationLabel = 'Rješeni testovi';
     protected static ?string $pluralModelLabel = 'Rješeni testovi';
     protected static ?string $modelLabel = 'Rješeni test';
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 96;
 
     public static function canCreate(): bool { return false; }
     public static function canEdit(Model $record): bool { return false; }

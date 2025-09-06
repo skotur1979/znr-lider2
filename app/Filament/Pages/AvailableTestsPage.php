@@ -9,7 +9,7 @@ class AvailableTestsPage extends Page
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-check';
     protected static ?string $navigationLabel = 'Riješi testove';
     protected static ?string $navigationGroup = 'Testiranje';
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 95;
 
     protected static string $view = 'filament.pages.available-tests-page';
     

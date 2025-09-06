@@ -34,7 +34,7 @@ class QuestionResource extends Resource
     protected static ?string $navigationLabel = 'Pitanja';
     protected static ?string $pluralModelLabel = 'Pitanja';
     protected static ?string $modelLabel = 'Pitanje';
-    protected static ?int $navigationSort = 31;
+    protected static ?int $navigationSort = 98;
 
     public static function form(Form $form): Form
     {
