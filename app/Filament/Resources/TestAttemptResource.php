@@ -28,17 +28,31 @@ class TestAttemptResource extends Resource
 
     public static function canCreate(): bool { return false; }
     public static function canEdit(Model $record): bool { return false; }
-    public static function canDelete(Model $record): bool { return false; }
+
+    // ✅ smijemo brisati: admin bilo što, user samo svoje
+    public static function canDelete(Model $record): bool
+    {
+        $user = Auth::user();
+        return $user && ($user->isAdmin() || $record->user_id === $user->id);
+    }
+
+    // ✅ bulk delete samo admin
+    public static function canDeleteAny(): bool
+    {
+        return (bool) Auth::user()?->isAdmin();
+    }
 
     public static function form(Form $form): Form { return $form->schema([]); }
 
     public static function getEloquentQuery(): Builder
     {
         $q = parent::getEloquentQuery();
+
         if (! Auth::user()?->isAdmin()) {
             $q->where('user_id', Auth::id());
         }
-        return $q->with(['user','test']);
+
+        return $q->with(['user', 'test']);
     }
 
     public static function table(Table $table): Table
@@ -54,20 +68,31 @@ class TestAttemptResource extends Resource
                 TextColumn::make('rezultat')->label('Rezultat (%)')->suffix('%'),
                 BadgeColumn::make('prolaz')
                     ->label('Prolaz')
-                    ->enum([ true => 'Da', false => 'Ne' ])   // tekst
-                ->color(fn ($state) => $state ? 'success' : 'danger'),
-    
+                    ->enum([ true => 'Da', false => 'Ne' ])
+                    ->color(fn ($state) => $state ? 'success' : 'danger'),
                 TextColumn::make('created_at')->dateTime('d.m.Y H:i')->label('Datum slanja'),
             ])
             ->defaultSort('created_at', 'desc')
             ->actions([
                 Tables\Actions\ViewAction::make()
-    ->url(fn (TestAttempt $record) => route('test-attempts.show', $record))
-    ->openUrlInNewTab()
-    ->label('Prikaži')
-    ->icon('heroicon-o-eye')
-            ]) // uklonjene akcije poput Edit
-            ->bulkActions([]); // uklonjene bulk akcije poput Delete
+                    ->url(fn (TestAttempt $record) => route('test-attempts.show', $record))
+                    ->openUrlInNewTab()
+                    ->label('Prikaži')
+                    ->icon('heroicon-o-eye'),
+
+                // 🗑️ pojedinačno brisanje (Filament će sam sakriti ako canDelete() vrati false)
+                Tables\Actions\DeleteAction::make()
+                    ->label('Obriši')
+                    ->requiresConfirmation()
+                    ->modalHeading('Obriši pokušaj testa')
+                    ->modalSubheading('Jeste li sigurni? Ova akcija je trajna.')
+                    ->successNotificationTitle('Pokušaj je obrisan.'),
+            ])
+            ->bulkActions([
+                Tables\Actions\DeleteBulkAction::make()
+                    ->label('Obriši odabrane')
+                    ->visible(fn () => Auth::user()?->isAdmin()), // samo admin
+            ]);
     }
 
     public static function getRelations(): array
@@ -81,13 +106,14 @@ class TestAttemptResource extends Resource
             'index' => Pages\ListTestAttempts::route('/'),
         ];
     }
-    public static function getNavigationBadge(): ?string
-{
-    $q = static::getModel()::query();
-    if (! auth()->user()?->isAdmin()) {
-        $q->where('user_id', auth()->id());
-    }
-    return (string) $q->count();
-}
 
+    // badge: admin vidi sve, korisnik samo svoje
+    public static function getNavigationBadge(): ?string
+    {
+        $q = static::getModel()::query();
+        if (! Auth::user()?->isAdmin()) {
+            $q->where('user_id', Auth::id());
+        }
+        return (string) $q->count();
+    }
 }

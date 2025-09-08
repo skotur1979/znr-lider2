@@ -18,6 +18,9 @@ Route::middleware(['auth'])->group(function () {
     
 
     Route::get('/test-attempts/{attempt}/pdf', [TestAttemptController::class, 'downloadPdf'])->name('test-attempts.download');
+    Route::middleware(['auth'])->group(function () {
+    Route::get('/tests/{test}/start', TestForm::class)->name('tests.start'); // alias
+});
 
     
 });
