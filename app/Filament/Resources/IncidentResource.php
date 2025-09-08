@@ -21,7 +21,11 @@ use App\Traits\AutoAssignsUser;
 class IncidentResource extends Resource
 {
     use AutoAssignsUser; // ⬅️ ako već koristiš ovaj trait
-  
+    protected static array $INCIDENT_TYPES = [
+        'LTA' => 'LTA – Ozljeda na radu',
+        'MTA' => 'MTA – Pružanje PP izvan tvrtke',
+        'FAA' => 'FAA – Pružanje PP u tvrtki',
+    ];
 
     protected static ?string $model = Incident::class;
 
@@ -46,9 +50,10 @@ class IncidentResource extends Resource
         TextInput::make('location')->label('Lokacija')
             ->required(),
 
-        Select::make('type_of_incident')->label('Vrsta Incidenta')
-            ->options(['LTA' => 'LTA - Ozljeda na radu', 'MTA' => 'MTA - Pružanje PP izvan tvrtke', 'FAA' => 'FAA - Pužanje PP u tvrtki'])
-            ->required(),
+        Select::make('type_of_incident')
+        ->label('Vrsta Incidenta')
+        ->options(self::$INCIDENT_TYPES)
+        ->required(),
 
         Select::make('permanent_or_temporary')->label('Vrsta Zaposlenja')
             ->options(['Permanent' => 'Stalni', 'Temporary' => 'Privremeni'])
@@ -146,7 +151,19 @@ TextInput::make('working_days_lost')
     return $table
         ->columns([
             TextColumn::make('location')->label('Lokacija'),
-            TextColumn::make('type_of_incident')->alignCenter()->label('Vrsta incidenta'),
+           TextColumn::make('type_of_incident')
+    ->label('Vrsta incidenta')
+    ->alignCenter()
+    ->extraAttributes(['class' => 'font-semibold text-center']) // bold + centrirano
+    ->description(function ($record) {
+        $map = [
+            'LTA' => 'Ozljeda na radu',
+            'MTA' => 'Pružanje PP izvan tvrtke',
+            'FAA' => 'Pružanje PP u tvrtki',
+        ];
+        return $map[$record->type_of_incident] ?? null; // drugi red (manji tekst)
+    }, position: 'below')
+    ->wrap(),
             TextColumn::make('date_occurred')->alignCenter()->date()->label('Datum nastanka'),
             TextColumn::make('working_days_lost')->alignCenter()->label('Izgubljeni radni dani'),
             TextColumn::make('injured_body_part')->alignCenter()->label('Ozlijeđeni dio tijela'),
@@ -176,23 +193,19 @@ TextInput::make('working_days_lost')
         ])
         ->filters([
 
-    // Filter po vrsti incidenta
     SelectFilter::make('prikaz')
-        ->label('Vrsta incidenta')
-        ->options([
-            'LTA' => 'LTA',
-            'MTA' => 'MTA',
-            'FAA' => 'FAA',
-            'deaktivirani' => 'Deaktivirani',
-        ])
-        ->placeholder('Svi aktivni')
-        ->query(function (Builder $query, array $data): Builder {
-            return match ($data['value'] ?? 'svi') {
-                'LTA', 'MTA', 'FAA' => $query->withoutTrashed()->where('type_of_incident', $data['value']),
-                'deaktivirani' => $query->onlyTrashed(),
-                default => $query->withoutTrashed(),
-            };
-        }),
+    ->label('Vrsta incidenta')
+    ->options(self::$INCIDENT_TYPES + ['deaktivirani' => 'Deaktivirani'])
+    ->placeholder('Svi aktivni')
+    ->query(function (Builder $query, array $data): Builder {
+        $value = $data['value'] ?? null;
+
+        return match ($value) {
+            'LTA', 'MTA', 'FAA' => $query->withoutTrashed()->where('type_of_incident', $value),
+            'deaktivirani'       => $query->onlyTrashed(),
+            default              => $query->withoutTrashed(),
+        };
+    }),
             // Filter po godini nastanka
     SelectFilter::make('godina_filter')
     ->label('Godina nastanka')

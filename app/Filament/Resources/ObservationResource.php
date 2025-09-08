@@ -112,7 +112,16 @@ class ObservationResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('incident_date')->label('Datum')->wrap()->sortable()->alignCenter()->date('d-m-Y'),
-                Tables\Columns\TextColumn::make('observation_type')->wrap()->alignCenter()->label('Vrsta zapažanja'),
+                Tables\Columns\TextColumn::make('observation_type')
+    ->wrap()
+    ->alignCenter()
+    ->label('Vrsta zapažanja')
+    ->formatStateUsing(fn (string $state) => match ($state) {
+        'Near Miss' => 'NM-Skoro nezgoda',
+        'Negative Observation' => 'Negativno zapažanje',
+        'Positive Observation' => 'Pozitivno zapažanje',
+        default => $state,
+    }),
                 Tables\Columns\TextColumn::make('location')->alignCenter()->label('Lokacija'),
                 Tables\Columns\TextColumn::make('item')->size('sm')->wrap()->label('Stavka'),
                 Tables\Columns\TextColumn::make('potential_incident_type')->size('sm')->alignCenter()->wrap()->label('Vrsta opasnosti'),
