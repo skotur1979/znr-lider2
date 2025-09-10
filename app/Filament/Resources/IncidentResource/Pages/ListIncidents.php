@@ -11,19 +11,27 @@ use Spatie\SimpleExcel\SimpleExcelWriter;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Carbon;
 
 class ListIncidents extends ListRecords
 {
     protected static string $resource = IncidentResource::class;
 
-    /** Builda OSNOVNI upit s istim filterima koje koristi UI (godina + vlasnik) */
+    /**
+     * OSNOVNI upit – koristi iste filtere kao UI (godina + vlasnik),
+     * isključuje deaktivirane i soft-deleted zapise.
+     *
+     * @return array{\Illuminate\Database\Eloquent\Builder,int}
+     */
     protected function baseQuery()
     {
         // Godina iz SelectFilter::make('godina_filter')
         $year = request()->input('tableFilters.godina_filter.value');
         $year = is_numeric($year) ? (int) $year : now()->year;
 
-        $q = Incident::query()->withoutTrashed()
+        $q = Incident::query()
+            ->withoutTrashed()
+            ->where('active', true)
             ->when($year, fn ($qq) => $qq->whereYear('date_occurred', $year));
 
         // Admin vidi sve, korisnik samo svoje
@@ -43,13 +51,35 @@ class ListIncidents extends ListRecords
         $mta    = (clone $incidenti)->where('type_of_incident', 'MTA')->count();
         $faa    = (clone $incidenti)->where('type_of_incident', 'FAA')->count();
 
+        // --- Dana bez ozljede (LTA) – globalno, bez ograničenja na godinu ---
+        $user    = Auth::user();
+        $isAdmin = $user?->isAdmin();
+
+        $lastLtaDate = Incident::query()
+            ->withoutTrashed()
+            ->where('active', true)
+            ->when(! $isAdmin, fn ($q) => $q->where('user_id', $user->id))
+            ->where('type_of_incident', 'LTA')
+            ->max('date_occurred'); // prilagodi ako se drugačije zove
+
+        $daysSinceLastLta = null;
+        $lastLtaAt        = null;
+
+        if ($lastLtaDate) {
+            $lastLtaAt        = Carbon::parse($lastLtaDate);
+            $daysSinceLastLta = $lastLtaAt->diffInDays(now());
+        }
+        // ---------------------------------------------------------------------
+
         return view('exports.incidents-header', [
-            'selectedYear' => $selectedYear,
-            'ukupno'       => $ukupno,
-            'lta'          => $lta,
-            'mta'          => $mta,
-            'faa'          => $faa,
-            'actions'      => $this->getCachedActions(),
+            'selectedYear'      => $selectedYear,
+            'ukupno'            => $ukupno,
+            'lta'               => $lta,
+            'mta'               => $mta,
+            'faa'               => $faa,
+            'actions'           => $this->getCachedActions(),
+            'daysSinceLastLta'  => $daysSinceLastLta,
+            'lastLtaAt'         => $lastLtaAt,
         ]);
     }
 
@@ -93,16 +123,16 @@ class ListIncidents extends ListRecords
                         'other',
                     ])->map(function ($i) {
                         return [
-                            'Lokacija'            => $i->location,
-                            'Vrsta incidenta'     => $i->type_of_incident,
-                            'Vrsta zaposlenja'    => $i->permanent_or_temporary,
-                            'Datum nastanka'      => optional($i->date_occurred)->format('Y-m-d'),
-                            'Datum povratka'      => optional($i->date_of_return)->format('Y-m-d'),
-                            'Izgubljeni dani'     => $i->working_days_lost,
-                            'Uzrok'               => $i->causes_of_injury,
-                            'Tip ozljede'         => $i->accident_injury_type,
-                            'Ozlijeđeni dio'      => $i->injured_body_part,
-                            'Napomena'            => $i->other,
+                            'Lokacija'         => $i->location,
+                            'Vrsta incidenta'  => $i->type_of_incident,
+                            'Vrsta zaposlenja' => $i->permanent_or_temporary,
+                            'Datum nastanka'   => optional($i->date_occurred)->format('Y-m-d'),
+                            'Datum povratka'   => optional($i->date_of_return)->format('Y-m-d'),
+                            'Izgubljeni dani'  => $i->working_days_lost,
+                            'Uzrok'            => $i->causes_of_injury,
+                            'Tip ozljede'      => $i->accident_injury_type,
+                            'Ozlijeđeni dio'   => $i->injured_body_part,
+                            'Napomena'         => $i->other,
                         ];
                     });
 

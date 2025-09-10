@@ -1,4 +1,4 @@
-<div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-4">
     <div class="rounded p-4 text-center border dark:border-blue-500 bg-white dark:bg-gray-900">
         <div class="text-sm text-gray-500 dark:text-gray-300 font-bold uppercase">Godina</div>
         <div class="text-xl font-bold text-gray-700 dark:text-white">{{ $selectedYear }}</div>
@@ -23,7 +23,18 @@
         <div class="text-sm text-gray-500 dark:text-gray-300 font-bold uppercase">FAA</div>
         <div class="text-3xl font-bold text-green-600 dark:text-green-400">{{ $faa }}</div>
     </div>
+
+    @if(!is_null($daysSinceLastLta))
+        <div class="rounded p-4 text-center bg-white dark:bg-gray-800 shadow">
+            <div class="text-sm text-gray-500 dark:text-gray-300 font-bold uppercase">Dana bez ozljede (LTA)</div>
+            <div class="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{{ $daysSinceLastLta }}</div>
+            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                od {{ $lastLtaAt->translatedFormat('j. M Y') }}
+            </div>
+        </div>
+    @endif
 </div>
+
 
 
 
