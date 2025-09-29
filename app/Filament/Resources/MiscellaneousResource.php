@@ -56,7 +56,6 @@ class MiscellaneousResource extends Resource
                     // U FORMI – zamijeni Select::make('category_id') blok ovim
 Select::make('category_id')
     ->label('Kategorija')
-    ->required()
     ->searchable()
     ->preload()
     // 🔒 prikaz opcija kod otvaranja/selectanja (filtrirano po vlasniku)

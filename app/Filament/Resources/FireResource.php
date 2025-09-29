@@ -128,7 +128,9 @@ class FireResource extends Resource
 
                 TextColumn::make('place')->searchable()->sortable()->weight('bold')->label('Mjesto gdje se aparat nalazi'),
                 TextColumn::make('type')->alignCenter()->searchable()->sortable()->size('sm')->label('Tip aparata'),
-                TextColumn::make('factory_number/year_of_production')->alignCenter()->searchable()->sortable()->size('sm')->label('Tvor.broj/Godina proizv.'),
+                // ⬇️ PRIKAZ PREKO ALIASA (bez direktnog pristupa koloni s kosom crtom)
+                // (Bez searchable/sortable jer v2 nema jednostavan callback za custom kolonu)
+                TextColumn::make('factory_number_year_of_production')->alignCenter()->searchable()->sortable()->size('sm')->label('Tvor.broj/Godina proizv.'),
                 TextColumn::make('examination_valid_from')->alignCenter()->date('d.m.Y.')->sortable()->label('Datum ispitivanja'),
 
                 BadgeColumn::make('examination_valid_until')

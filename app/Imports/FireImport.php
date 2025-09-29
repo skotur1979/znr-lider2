@@ -19,7 +19,7 @@ class FireImport implements ToModel, WithHeadingRow
         return new Fire([
             'place' => $row['mjesto'],
             'type' => $row['tip_aparata'],
-            'factory_number/year_of_production' => $row['tvor_br_god_proiz'] ?? null,
+            'factory_number_year_of_production'  => $row['tvor_br_god_proiz'] ?? null,
             'serial_label_number' => $row['serijski_broj_naljepnice'] ?? null,
             'examination_valid_from' => $this->parseDate($row['datum_servisa_od']),
             'examination_valid_until' => $this->parseDate($row['vrijedi_do']),

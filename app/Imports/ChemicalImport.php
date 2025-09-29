@@ -6,6 +6,8 @@ use App\Models\Chemical;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Carbon\Carbon;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate; // ⬅️ DODANO
+use Illuminate\Support\Facades\Auth;
 
 class ChemicalImport implements ToModel, WithHeadingRow
 {

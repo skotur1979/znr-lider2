@@ -6,49 +6,95 @@ use App\Models\Miscellaneous;
 use App\Models\Category;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use PhpOffice\PhpSpreadsheet\Shared\Date;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class MiscellaneousImport implements ToModel, WithHeadingRow
 {
     public function model(array $row)
     {
-        if (empty($row['naziv']) || empty($row['kategorija']) || empty($row['vrijedi_od']) || empty($row['vrijedi_do'])) {
-            return null; // preskoči red ako fale obavezna polja
+        // Normalizacija/trim
+        $naziv         = $this->t($row['naziv'] ?? null);
+        $kategorija    = $this->t($row['kategorija'] ?? null);
+        $ispitao       = $this->t($row['ispitao'] ?? null);
+        $brojIzvjestaja= $this->t($row['broj_izvjestaja'] ?? null);
+        $napomena      = $this->t($row['napomena'] ?? null);
+
+        // Obavezna polja
+        if (!$naziv || empty($row['vrijedi_od']) || empty($row['vrijedi_do'])) {
+            return null;
         }
 
-        $categoryId = Category::where('name', trim($row['kategorija']))->value('id');
+        // Parsiranje datuma
+        $od  = $this->parseDate($row['vrijedi_od']);
+        $do  = $this->parseDate($row['vrijedi_do']);
 
-        if (!$categoryId) {
-            return null; // preskoči ako kategorija ne postoji
+        if (!$od || !$do) {
+            return null;
+        }
+
+        // Ako su datumi zamijenjeni, rotiraj
+        if (Carbon::parse($od)->gt(Carbon::parse($do))) {
+            [$od, $do] = [$do, $od];
+        }
+
+        // Pokušaj pronaći kategoriju za trenutnog korisnika
+        $userId = Auth::id() ?? 1;
+        $categoryId = null;
+
+        if ($kategorija) {
+            $categoryId = Category::where('user_id', $userId)
+                ->where('name', $kategorija)
+                ->value('id');
         }
 
         return new Miscellaneous([
-            'name' => $row['naziv'],
-            'category_id' => $categoryId,
-            'examiner' => $row['ispitao'] ?? null,
-            'report_number' => $row['broj_izvjestaja'] ?? null,
-            'examination_valid_from' => $this->parseDate($row['vrijedi_od']),
-            'examination_valid_until' => $this->parseDate($row['vrijedi_do']),
-            'remark' => $row['napomena'] ?? null,
-            'user_id' => Auth::id() ?? 1, // ako nema korisnika, default na ID 1
+            'name'                     => $naziv,
+            'category_id'              => $categoryId, // ostaje null ako kategorija ne postoji
+            'examiner'                 => $ispitao ?: null,
+            'report_number'            => $brojIzvjestaja ?: null,
+            'examination_valid_from'   => $od,
+            'examination_valid_until'  => $do,
+            'remark'                   => $napomena ?: null,
+            'user_id'                  => $userId,
         ]);
     }
 
-    private function parseDate($value)
+    private function parseDate($value): ?string
     {
-        if (empty($value)) return null;
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            try {
+                return ExcelDate::excelToDateTimeObject($value)->format('Y-m-d');
+            } catch (\Throwable $e) {}
+        }
+
+        $v = trim((string) $value);
+        $v = rtrim($v, '.');
+
+        $formats = ['d.m.Y', 'Y-m-d', 'd/m/Y', 'd-m-Y', 'd.m.y'];
+
+        foreach ($formats as $f) {
+            try {
+                return Carbon::createFromFormat($f, $v)->format('Y-m-d');
+            } catch (\Throwable $e) {}
+        }
 
         try {
-            // Ako je numerički (Excel format), konvertiraj
-            if (is_numeric($value)) {
-                return Date::excelToDateTimeObject($value)->format('Y-m-d');
-            }
-
-            // Inače probaj ručno parsirati
-            return \Carbon\Carbon::parse($value)->format('Y-m-d');
-        } catch (\Exception $e) {
+            return Carbon::parse($v)->format('Y-m-d');
+        } catch (\Throwable $e) {
             return null;
         }
     }
+
+    private function t(?string $v): ?string
+    {
+        $v = is_string($v) ? trim($v) : $v;
+        return $v === '' ? null : $v;
+    }
 }
+

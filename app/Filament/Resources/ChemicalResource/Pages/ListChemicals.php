@@ -63,7 +63,7 @@ class ListChemicals extends ListRecords
         /** @var TemporaryUploadedFile $file */
         $file = $data['excel_file'];
         Excel::import(new ChemicalImport, $file->getRealPath());
-        Filament\Notifications\Notification::make()
+        Notification::make()
             ->title('Uvoz uspješan')
             ->success()
             ->send();
