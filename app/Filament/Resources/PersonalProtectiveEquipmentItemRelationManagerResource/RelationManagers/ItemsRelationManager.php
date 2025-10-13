@@ -9,18 +9,16 @@ use Filament\Forms;
 use Filament\Tables\Columns\{TextColumn, BadgeColumn, ImageColumn};
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\View;
+use Filament\Forms\Components\Hidden;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Actions\{EditAction, DeleteAction, Action};
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
-use Filament\Forms\Components\View;
-// ✅ ispravan namespace za plugin v1 (Filament v2)
-use Savannabits\SignaturePad\Forms\Components\Fields\SignaturePad;
 
 class ItemsRelationManager extends RelationManager
 {
     protected static string $relationship = 'items';
-
     protected static ?string $title = 'Popis osobne zaštitne opreme';
 
     public static function form(Form $form): Form
@@ -60,23 +58,25 @@ class ItemsRelationManager extends RelationManager
                 ->reactive()
                 ->afterStateUpdated(fn ($state, $set, $get) => self::recalcEndDate($set, $get)),
 
-            // Prikaz izračunatog isteka (sprema se kroz model saving hook)
             DatePicker::make('end_date')
                 ->label('Datum isteka')
                 ->disabled()
                 ->dehydrated(false)
                 ->helperText('Automatski izračun iz “Izdano” + “Rok (mjeseci)”.'),
 
-            // 👇 POTPIS – v1 API (bez minHeight/maxWidth)
+            // potpis – vrijednost se piše u ovo hidden polje
+            Hidden::make('signature')->reactive(),
+
+            // signature-pad view, vezan na isto stanje preko statePath('signature')
             View::make('filament.components.ozo-signature')
-    ->label('Potpis – preuzeo OZO')
-    ->columnSpanFull(),
+                ->label('Potpis – preuzeo OZO')
+                ->columnSpanFull()
+                ->statePath('signature'),
 
             DatePicker::make('return_date')->label('Datum vraćanja'),
         ])->columns(4);
     }
 
-    /** Izračun end_date u form state-u (radi prikaza). */
     protected static function recalcEndDate(callable $set, callable $get): void
     {
         $issue  = $get('issue_date');
@@ -107,7 +107,7 @@ class ItemsRelationManager extends RelationManager
                     })
                     ->colors([
                         'success' => fn ($state) => $state && Carbon::parse($state)->gt(today()->addDays(30)),
-                        'warning' => fn ($state) => $state && Carbon::parse($state)->betweenIncluded(today(), today()->addDays(30)),
+                        'warning' => fn ($state) => $state && Carbon::parse($state)->between(today(), today()->addDays(30)),
                         'danger'  => fn ($state) => $state && Carbon::parse($state)->lt(today()),
                     ])
                     ->icon('heroicon-o-clock')
@@ -151,3 +151,4 @@ class ItemsRelationManager extends RelationManager
             ]);
     }
 }
+
