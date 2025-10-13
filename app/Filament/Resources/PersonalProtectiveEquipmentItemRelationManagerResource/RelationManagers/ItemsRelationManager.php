@@ -7,15 +7,15 @@ use Filament\Resources\Table;
 use Filament\Resources\Form;
 use Filament\Forms;
 use Filament\Tables\Columns\{TextColumn, BadgeColumn, ImageColumn};
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\View;
 use Filament\Tables\Filters\Filter;
-use Filament\Tables\Actions\{EditAction, DeleteAction, Action, CreateAction};
+use Filament\Tables\Actions\{EditAction, DeleteAction, Action};
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Filament\Forms\Components\View;
+// ✅ ispravan namespace za plugin v1 (Filament v2)
+use Savannabits\SignaturePad\Forms\Components\Fields\SignaturePad;
 
 class ItemsRelationManager extends RelationManager
 {
@@ -24,65 +24,59 @@ class ItemsRelationManager extends RelationManager
     protected static ?string $title = 'Popis osobne zaštitne opreme';
 
     public static function form(Form $form): Form
-{
-    return $form->schema([
-        TextInput::make('equipment_name')
-        ->label('Naziv OZO')
-        ->required()
-        ->datalist([
-        'Zaštitna Kaciga',
-        'Zaštitne naočale prozirne',
-        'Zaštitne Rukavice',
-        'Reflektirajući prsluk',
-        'Zaštitne cipele s kapicom',
-        'Zaštitne gumene čizme',
-        'Radne hlače',
-        'Radna jakna',
-        'Majca s kratkim rukavima',
-        'Majca s dugim rukavima',
-        'Zimska jakna sa rukavima',
-        'Manžeta za zaštitu podlaktice',
-        'Zaštitna polumaska s filterima',
-    ]),
+    {
+        return $form->schema([
+            TextInput::make('equipment_name')
+                ->label('Naziv OZO')
+                ->required()
+                ->datalist([
+                    'Zaštitna Kaciga',
+                    'Zaštitne naočale prozirne',
+                    'Zaštitne Rukavice',
+                    'Reflektirajući prsluk',
+                    'Zaštitne cipele s kapicom',
+                    'Zaštitne gumene čizme',
+                    'Radne hlače',
+                    'Radna jakna',
+                    'Majca s kratkim rukavima',
+                    'Majca s dugim rukavima',
+                    'Zimska jakna sa rukavima',
+                    'Manžeta za zaštitu podlaktice',
+                    'Zaštitna polumaska s filterima',
+                ]),
 
-        TextInput::make('standard')->label('HRN EN')->maxLength(64),
-                TextInput::make('size')->label('Veličina')->maxLength(20),
+            TextInput::make('standard')->label('HRN EN')->maxLength(64),
+            TextInput::make('size')->label('Veličina')->maxLength(20),
 
-                TextInput::make('duration_months')
-                    ->label('Rok uporabe (mjeseci)')
-                    ->numeric()->minValue(0)->maxValue(120)
-                    ->reactive()
-                    ->afterStateUpdated(fn ($state, $set, $get) => self::recalcEndDate($set, $get)),
+            TextInput::make('duration_months')
+                ->label('Rok uporabe (mjeseci)')
+                ->numeric()->minValue(0)->maxValue(120)
+                ->reactive()
+                ->afterStateUpdated(fn ($state, $set, $get) => self::recalcEndDate($set, $get)),
 
-                DatePicker::make('issue_date')
-                    ->label('Datum izdavanja')
-                    ->required()
-                    ->reactive()
-                    ->afterStateUpdated(fn ($state, $set, $get) => self::recalcEndDate($set, $get)),
+            DatePicker::make('issue_date')
+                ->label('Datum izdavanja')
+                ->required()
+                ->reactive()
+                ->afterStateUpdated(fn ($state, $set, $get) => self::recalcEndDate($set, $get)),
 
-                // Prikaz izračunatog isteka (sprema se kroz model saving hook)
-                DatePicker::make('end_date')
-                    ->label('Datum isteka')
-                    ->disabled()
-                    ->dehydrated(false)
-                    ->helperText('Automatski izračun iz “Izdano” + “Rok (mjeseci)”.'),
+            // Prikaz izračunatog isteka (sprema se kroz model saving hook)
+            DatePicker::make('end_date')
+                ->label('Datum isteka')
+                ->disabled()
+                ->dehydrated(false)
+                ->helperText('Automatski izračun iz “Izdano” + “Rok (mjeseci)”.'),
 
-                // Tvoj signature pad view (ako ga koristiš)
-                View::make('filament.components.signature-pad')->label('Unos potpisa'),
+            // 👇 POTPIS – v1 API (bez minHeight/maxWidth)
+            View::make('filament.components.ozo-signature')
+    ->label('Potpis – preuzeo OZO')
+    ->columnSpanFull(),
 
-                FileUpload::make('signature')
-                    ->label('Spremi potpisanu sliku ovdje')
-                    ->directory('signatures')
-                    ->visibility('public')
-                    ->image()
-                    ->maxSize(2048)
-                    ->columnSpanFull(),
-
-                DatePicker::make('return_date')->label('Datum vraćanja'),
-            ])->columns(4);
+            DatePicker::make('return_date')->label('Datum vraćanja'),
+        ])->columns(4);
     }
 
-    /** Izračun end_date u form state-u (radi prikaza). Stvarno spremanje radi model saving hook. */
+    /** Izračun end_date u form state-u (radi prikaza). */
     protected static function recalcEndDate(callable $set, callable $get): void
     {
         $issue  = $get('issue_date');
@@ -94,10 +88,9 @@ class ItemsRelationManager extends RelationManager
         }
     }
 
-
     public static function table(Table $table): Table
-{
-    return $table
+    {
+        return $table
             ->columns([
                 TextColumn::make('equipment_name')->label('Naziv OZO')->searchable()->weight('semibold'),
                 TextColumn::make('standard')->label('HRN EN')->toggleable(),
@@ -106,31 +99,19 @@ class ItemsRelationManager extends RelationManager
                 TextColumn::make('issue_date')->label('Izdano')->date('d.m.Y.')->alignCenter(),
 
                 BadgeColumn::make('end_date')
-    ->label('Istek')
-    ->formatStateUsing(function ($state) {
-        if (blank($state)) return '—';
-        $dt = $state instanceof Carbon ? $state : Carbon::parse($state);
-        return $dt->format('d.m.Y.');
-    })
-    ->colors([
-        'success' => function ($state) {
-            if (blank($state)) return false;
-            $dt = $state instanceof Carbon ? $state : Carbon::parse($state);
-            return $dt->gt(today()->addDays(30));
-        },
-        'warning' => function ($state) {
-            if (blank($state)) return false;
-            $dt = $state instanceof Carbon ? $state : Carbon::parse($state);
-            return $dt->gte(today()) && $dt->lte(today()->addDays(30));
-        },
-        'danger' => function ($state) {
-            if (blank($state)) return false;
-            $dt = $state instanceof Carbon ? $state : Carbon::parse($state);
-            return $dt->lt(today());
-        },
-    ])
-    ->icon('heroicon-o-clock')
-    ->alignCenter(),
+                    ->label('Istek')
+                    ->formatStateUsing(function ($state) {
+                        if (blank($state)) return '—';
+                        $dt = $state instanceof Carbon ? $state : Carbon::parse($state);
+                        return $dt->format('d.m.Y.');
+                    })
+                    ->colors([
+                        'success' => fn ($state) => $state && Carbon::parse($state)->gt(today()->addDays(30)),
+                        'warning' => fn ($state) => $state && Carbon::parse($state)->betweenIncluded(today(), today()->addDays(30)),
+                        'danger'  => fn ($state) => $state && Carbon::parse($state)->lt(today()),
+                    ])
+                    ->icon('heroicon-o-clock')
+                    ->alignCenter(),
 
                 TextColumn::make('return_date')->label('Datum vraćanja')->date('d.m.Y.')->alignCenter()->toggleable(),
 
@@ -149,27 +130,24 @@ class ItemsRelationManager extends RelationManager
                 Filter::make('vraceno')->label('Vraćeno')
                     ->query(fn (Builder $q) => $q->whereNotNull('return_date')),
             ])
-        ->headerActions([
-            \Filament\Tables\Actions\CreateAction::make()->label('Dodaj OZO'),
-        ])
-        ->actions([
+            ->headerActions([
+                \Filament\Tables\Actions\CreateAction::make()->label('Dodaj OZO'),
+            ])
+            ->actions([
                 EditAction::make(),
                 Action::make('extend3')->label('Produži +3 mj')
                     ->requiresConfirmation()
                     ->action(function ($record) {
-                        // povećaj rok (mjeseci) da se end_date ponovno ispravno izračuna u modelu
                         $record->duration_months = max(0, (int) $record->duration_months) + 3;
                         $record->save();
                     }),
-                
                 Action::make('returnedToday')->label('Označi vraćeno danas')
                     ->requiresConfirmation()
                     ->action(fn ($record) => $record->update(['return_date' => today()])),
                 DeleteAction::make(),
-        ])
-        ->bulkActions([
-            \Filament\Tables\Actions\DeleteBulkAction::make(),
-        ]);
-}
-
+            ])
+            ->bulkActions([
+                \Filament\Tables\Actions\DeleteBulkAction::make(),
+            ]);
+    }
 }

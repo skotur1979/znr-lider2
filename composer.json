@@ -8,6 +8,7 @@
         "php": "^8.0.2",
         "alperenersoy/filament-export": "^0.2.8",
         "barryvdh/laravel-dompdf": "^2.2",
+        "coolsam/signature-pad": "1.0",
         "doctrine/dbal": "*",
         "filament/filament": "^2.17",
         "guzzlehttp/guzzle": "^7.2",

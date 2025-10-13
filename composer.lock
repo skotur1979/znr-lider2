@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "122ec18bfbc982dabe8d074fba75eea9",
+    "content-hash": "e7e19ebd38e07e7767ba3f3f42e633a5",
     "packages": [
         {
             "name": "akaunting/laravel-money",
@@ -645,6 +645,88 @@
                 }
             ],
             "time": "2024-09-19T14:15:21+00:00"
+        },
+        {
+            "name": "coolsam/signature-pad",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/savannabits/filament-signature-pad.git",
+                "reference": "cf53fff233ce77e8e5db4285f84cdabc67bbf07a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/savannabits/filament-signature-pad/zipball/cf53fff233ce77e8e5db4285f84cdabc67bbf07a",
+                "reference": "cf53fff233ce77e8e5db4285f84cdabc67bbf07a",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": "^2.0",
+                "illuminate/contracts": "^9.0",
+                "php": "^8.0",
+                "spatie/laravel-package-tools": "^1.13.5"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.0",
+                "nunomaduro/collision": "^6.0",
+                "nunomaduro/larastan": "^2.0.1",
+                "orchestra/testbench": "^7.0",
+                "pestphp/pest": "^1.21",
+                "pestphp/pest-plugin-laravel": "^1.1",
+                "pestphp/pest-plugin-livewire": "^1.0",
+                "pestphp/pest-plugin-parallel": "^1.2",
+                "phpstan/extension-installer": "^1.1",
+                "phpstan/phpstan-deprecation-rules": "^1.0",
+                "phpstan/phpstan-phpunit": "^1.0",
+                "phpunit/phpunit": "^9.5",
+                "spatie/laravel-ray": "^1.26"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "SignaturePad": "Savannabits\\SignaturePad\\Facades\\SignaturePad"
+                    },
+                    "providers": [
+                        "Savannabits\\SignaturePad\\SignaturePadServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Savannabits\\SignaturePad\\": "src",
+                    "Savannabits\\SignaturePad\\Database\\Factories\\": "database/factories"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Sam Maosa",
+                    "email": "maosa.sam@gmail.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Signature Pad Field for Filamentphp Forms",
+            "homepage": "https://github.com/savannabits/filament-signature-pad",
+            "keywords": [
+                "filament-signature-pad",
+                "laravel",
+                "savannabits"
+            ],
+            "support": {
+                "issues": "https://github.com/savannabits/filament-signature-pad/issues",
+                "source": "https://github.com/savannabits/filament-signature-pad/tree/v1.0.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/coolsam",
+                    "type": "github"
+                }
+            ],
+            "time": "2022-12-30T07:15:03+00:00"
         },
         {
             "name": "danharrin/date-format-converter",
